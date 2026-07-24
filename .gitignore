@@ -1,0 +1,55 @@
+## Ignore build outputs
+bin/
+obj/
+publish/
+
+## Ignore user-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+## Ignore test/temp folders
+Deploy/
+Deploy-Standalone/
+TestResults/
+
+## VS Code
+.vscode/
+
+## Rider
+.idea/
+
+## Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+
+## Visual Studio cache/options
+.vs/
+
+## Database files (these are created at runtime)
+*.db
+*.db-shm
+*.db-wal
+!clients_template.db
+
+## Backup files
+*.backup
+*.bak
+
+## OS files
+Thumbs.db
+.DS_Store
+
+## Screenshots/test images
+*.PNG
+*.png
+*.jpg
+*.jpeg

@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(build.bat)",
+      "Bash(dotnet build:*)",
+      "Bash(dir \"C:\\Users\\Cameron\\Documents\\My Documents\\Programming\\Varistor\\PDC\\bin\\Release\\net8.0-windows\")",
+      "Bash(dir \"C:\\Users\\Cameron\\Documents\\My Documents\\Programming\\Varistor\\VAR\\bin\\Release\\net8.0-windows\")",
+      "Bash(xcopy:*)",
+      "Bash(dir:*)",
+      "Bash(dotnet publish:*)",
+      "Bash(cmd /c deploy-standalone.bat)",
+      "Bash(cmd /c build-and-deploy.bat)",
+      "Bash(git init:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
