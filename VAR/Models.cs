@@ -19,7 +19,9 @@ namespace VAR
         public bool IsApproved { get; set; }
         public string? ApprovedBy { get; set; }
         public string? ApprovedDate { get; set; }
+        public string? PurchaseOrder { get; set; }
         public decimal TotalValue { get; set; }
+        public int DisplayOrder { get; set; }
 
         public string VariationType
         {

@@ -26,6 +26,9 @@ namespace VAR
         private Button btnSave;
         private Button btnClose;
         private Button btnAddRow;
+        private Label lblSaveStatus;
+        private Timer saveStatusTimer;
+        private string _originalDataHash = "";
 
         public VariationEditorForm(DatabaseHelper dbHelper, int? variationId = null)
         {
@@ -43,7 +46,7 @@ namespace VAR
                 _variation = new Variation
                 {
                     VariationNumber = _dbHelper.GetNextVariationNumber(),
-                    VariationDate = DateTime.Now.ToString("yyyy-MM-dd")
+                    VariationDate = DateTime.Now.ToString("dd-MM-yyyy")
                 };
                 _lineItems = new List<LineItem>();
 
@@ -114,7 +117,8 @@ namespace VAR
             {
                 Location = new Point(leftMargin + 400 + labelWidth, topMargin),
                 Size = new Size(controlWidth, 20),
-                Format = DateTimePickerFormat.Short
+                Format = DateTimePickerFormat.Custom,
+                CustomFormat = "dd-MM-yyyy"
             };
             DateTime.TryParse(_variation.VariationDate, out DateTime variationDate);
             dtpVariationDate.Value = variationDate == DateTime.MinValue ? DateTime.Now : variationDate;
@@ -144,11 +148,15 @@ namespace VAR
                 AllowUserToAddRows = false,
                 AllowUserToDeleteRows = false,
                 SelectionMode = DataGridViewSelectionMode.CellSelect,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None,
+                AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells,
+                DefaultCellStyle = new DataGridViewCellStyle { WrapMode = DataGridViewTriState.True }
             };
             dgvLineItems.CellValueChanged += DgvLineItems_CellValueChanged;
             dgvLineItems.CurrentCellDirtyStateChanged += DgvLineItems_CurrentCellDirtyStateChanged;
             dgvLineItems.CellPainting += DgvLineItems_CellPainting;
+            dgvLineItems.CellClick += DgvLineItems_CellClick;
+            dgvLineItems.EditingControlShowing += DgvLineItems_EditingControlShowing;
 
             // Add Row Button
             btnAddRow = new Button
@@ -198,6 +206,25 @@ namespace VAR
             };
             btnClose.Click += BtnClose_Click;
 
+            // Save status label
+            lblSaveStatus = new Label
+            {
+                Location = new Point(leftMargin + 710, topMargin + rowHeight * 3 + 600),
+                Size = new Size(150, 25),
+                Font = new Font("Arial", 11, FontStyle.Bold),
+                ForeColor = Color.Green,
+                Text = "",
+                Visible = false
+            };
+
+            // Timer for hiding save status
+            saveStatusTimer = new Timer { Interval = 2000 };
+            saveStatusTimer.Tick += (s, e) =>
+            {
+                lblSaveStatus.Visible = false;
+                saveStatusTimer.Stop();
+            };
+
             this.Controls.Add(lblVariationNumber);
             this.Controls.Add(txtVariationNumber);
             this.Controls.Add(lblVariationName);
@@ -213,6 +240,7 @@ namespace VAR
             this.Controls.Add(lblGrandTotal);
             this.Controls.Add(btnSave);
             this.Controls.Add(btnClose);
+            this.Controls.Add(lblSaveStatus);
         }
 
         private void LoadData()
@@ -244,15 +272,17 @@ namespace VAR
             {
                 Name = "ItemDescription",
                 HeaderText = "Description",
-                Width = 250
+                Width = 350,
+                DefaultCellStyle = new DataGridViewCellStyle { WrapMode = DataGridViewTriState.True }
             });
 
             var typeColumn = new DataGridViewComboBoxColumn
             {
                 Name = "ItemType",
                 HeaderText = "Type",
-                Width = 80,
-                DataSource = new[] { "Cost", "Refund" }
+                Width = 90,
+                DataSource = new[] { "Cost", "Refund" },
+                DefaultCellStyle = new DataGridViewCellStyle { BackColor = Color.FromArgb(230, 240, 255) }
             };
             dgvLineItems.Columns.Add(typeColumn);
 
@@ -267,16 +297,16 @@ namespace VAR
             {
                 Name = "MaterialCost",
                 HeaderText = "Mat. Cost",
-                Width = 90
+                Width = 100
             });
 
             dgvLineItems.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "MaterialTotal",
                 HeaderText = "Mat. Total",
-                Width = 100,
+                Width = 110,
                 ReadOnly = true,
-                DefaultCellStyle = new DataGridViewCellStyle { BackColor = Color.LightGray, Format = "C2" }
+                DefaultCellStyle = new DataGridViewCellStyle { BackColor = Color.FromArgb(240, 255, 240), Format = "C2" }
             });
 
             dgvLineItems.Columns.Add(new DataGridViewTextBoxColumn
@@ -294,7 +324,8 @@ namespace VAR
                 Name = "HourlyRate",
                 HeaderText = "Hourly Rate",
                 Width = 150,
-                DataSource = rateOptions.ToArray()
+                DataSource = rateOptions.ToArray(),
+                DefaultCellStyle = new DataGridViewCellStyle { BackColor = Color.FromArgb(255, 250, 230) }
             };
             dgvLineItems.Columns.Add(hourlyRateColumn);
 
@@ -302,25 +333,25 @@ namespace VAR
             {
                 Name = "CustomRate",
                 HeaderText = "Custom Rate",
-                Width = 100
+                Width = 110
             });
 
             dgvLineItems.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "LabourTotal",
                 HeaderText = "Labour Total",
-                Width = 110,
+                Width = 120,
                 ReadOnly = true,
-                DefaultCellStyle = new DataGridViewCellStyle { BackColor = Color.LightGray, Format = "C2" }
+                DefaultCellStyle = new DataGridViewCellStyle { BackColor = Color.FromArgb(240, 248, 255), Format = "C2" }
             });
 
             dgvLineItems.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "LineTotal",
                 HeaderText = "Line Total",
-                Width = 110,
+                Width = 120,
                 ReadOnly = true,
-                DefaultCellStyle = new DataGridViewCellStyle { BackColor = Color.LightGray, Format = "C2" }
+                DefaultCellStyle = new DataGridViewCellStyle { BackColor = Color.FromArgb(255, 245, 230), Format = "C2" }
             });
 
             // Load line items into grid
@@ -358,6 +389,37 @@ namespace VAR
             }
 
             UpdateTotals();
+            ComputeDataHash();
+        }
+
+        private void ComputeDataHash()
+        {
+            // Create a simple hash of all data to detect real changes
+            var hashData = $"{txtVariationNumber.Text}|{txtVariationName.Text}|{dtpVariationDate.Value}|{cboClientContact.Text}|";
+            foreach (DataGridViewRow row in dgvLineItems.Rows)
+            {
+                for (int i = 0; i < row.Cells.Count; i++)
+                {
+                    hashData += row.Cells[i].Value?.ToString() ?? "";
+                    hashData += "|";
+                }
+            }
+            _originalDataHash = hashData.GetHashCode().ToString();
+            _hasUnsavedChanges = false;
+        }
+
+        private bool HasActualChanges()
+        {
+            var currentHash = $"{txtVariationNumber.Text}|{txtVariationName.Text}|{dtpVariationDate.Value}|{cboClientContact.Text}|";
+            foreach (DataGridViewRow row in dgvLineItems.Rows)
+            {
+                for (int i = 0; i < row.Cells.Count; i++)
+                {
+                    currentHash += row.Cells[i].Value?.ToString() ?? "";
+                    currentHash += "|";
+                }
+            }
+            return currentHash.GetHashCode().ToString() != _originalDataHash;
         }
 
         private void DgvLineItems_CurrentCellDirtyStateChanged(object? sender, EventArgs e)
@@ -374,9 +436,27 @@ namespace VAR
 
             var row = dgvLineItems.Rows[e.RowIndex];
 
+            // Format MaterialCost with dollar sign
+            if (e.ColumnIndex == dgvLineItems.Columns["MaterialCost"].Index)
+            {
+                FormatCurrencyInput(row.Cells["MaterialCost"]);
+            }
+
+            // Format CustomRate with dollar sign
+            if (e.ColumnIndex == dgvLineItems.Columns["CustomRate"].Index)
+            {
+                FormatCurrencyInput(row.Cells["CustomRate"]);
+            }
+
+            // Update custom rate state when hourly rate changes
+            if (e.ColumnIndex == dgvLineItems.Columns["HourlyRate"].Index)
+            {
+                UpdateCustomRateState(e.RowIndex);
+            }
+
             // Parse numeric values
             decimal matQty = ParseDecimal(row.Cells["MaterialQty"].Value);
-            decimal matCost = ParseDecimal(row.Cells["MaterialCost"].Value);
+            decimal matCost = ParseDecimalFromCurrency(row.Cells["MaterialCost"].Value);
             decimal hourQty = ParseDecimal(row.Cells["HourlyQty"].Value);
             decimal hourRate = 0;
 
@@ -384,7 +464,7 @@ namespace VAR
             string rateSelection = row.Cells["HourlyRate"].Value?.ToString() ?? "";
             if (rateSelection == "Custom")
             {
-                hourRate = ParseDecimal(row.Cells["CustomRate"].Value);
+                hourRate = ParseDecimalFromCurrency(row.Cells["CustomRate"].Value);
             }
             else if (!string.IsNullOrEmpty(rateSelection))
             {
@@ -413,19 +493,90 @@ namespace VAR
             _hasUnsavedChanges = true;
         }
 
+        private void FormatCurrencyInput(DataGridViewCell cell)
+        {
+            if (cell.Value == null) return;
+            string strValue = cell.Value.ToString()!;
+
+            // Remove existing $ signs and parse
+            strValue = strValue.Replace("$", "").Trim();
+            if (decimal.TryParse(strValue, out decimal value) && value != 0)
+            {
+                // Add $ sign but don't show decimals unless entered
+                if (strValue.Contains("."))
+                {
+                    cell.Value = "$" + value.ToString("0.##");
+                }
+                else
+                {
+                    cell.Value = "$" + value.ToString("0");
+                }
+            }
+        }
+
+        private decimal ParseDecimalFromCurrency(object? value)
+        {
+            if (value == null) return 0;
+            string strValue = value.ToString()!.Replace("$", "").Trim();
+            if (decimal.TryParse(strValue, out decimal result))
+                return result;
+            return 0;
+        }
+
         private void DgvLineItems_CellPainting(object? sender, DataGridViewCellPaintingEventArgs e)
         {
             if (e.RowIndex < 0) return;
 
-            // Highlight MaterialQty cell if empty
+            // Highlight MaterialQty cell if empty (lighter red)
             if (e.ColumnIndex == dgvLineItems.Columns["MaterialQty"].Index)
             {
                 var value = dgvLineItems.Rows[e.RowIndex].Cells[e.ColumnIndex].Value;
                 if (value == null || string.IsNullOrWhiteSpace(value.ToString()))
                 {
-                    e.CellStyle.BackColor = Color.LightSalmon;
+                    e.CellStyle.BackColor = Color.FromArgb(255, 200, 200);
                 }
             }
+        }
+
+        private void DgvLineItems_CellClick(object? sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0) return;
+
+            // Immediately open dropdown for combo box columns
+            if (dgvLineItems.Columns[e.ColumnIndex] is DataGridViewComboBoxColumn)
+            {
+                dgvLineItems.BeginEdit(true);
+                if (dgvLineItems.EditingControl is ComboBox combo)
+                {
+                    combo.DroppedDown = true;
+                }
+            }
+
+            // Handle Custom Rate enable/disable
+            UpdateCustomRateState(e.RowIndex);
+        }
+
+        private void DgvLineItems_EditingControlShowing(object? sender, DataGridViewEditingControlShowingEventArgs e)
+        {
+            // Auto-open dropdown when editing combobox
+            if (e.Control is ComboBox combo)
+            {
+                combo.DroppedDown = true;
+            }
+        }
+
+        private void UpdateCustomRateState(int rowIndex)
+        {
+            if (rowIndex < 0 || rowIndex >= dgvLineItems.Rows.Count) return;
+
+            var row = dgvLineItems.Rows[rowIndex];
+            string rateSelection = row.Cells["HourlyRate"].Value?.ToString() ?? "";
+            bool isCustom = rateSelection == "Custom";
+
+            // Enable/disable custom rate cell
+            row.Cells["CustomRate"].ReadOnly = !isCustom;
+            row.Cells["CustomRate"].Style.BackColor = isCustom ? Color.White : Color.FromArgb(240, 240, 240);
+            row.Cells["CustomRate"].Style.ForeColor = isCustom ? Color.Black : Color.Gray;
         }
 
         private decimal ParseDecimal(object? value)
@@ -520,7 +671,7 @@ namespace VAR
             // Update variation object
             _variation.VariationNumber = txtVariationNumber.Text.Trim();
             _variation.VariationName = txtVariationName.Text.Trim();
-            _variation.VariationDate = dtpVariationDate.Value.ToString("yyyy-MM-dd");
+            _variation.VariationDate = dtpVariationDate.Value.ToString("dd-MM-yyyy");
             _variation.ClientContact = cboClientContact.Text.Trim();
 
             // Collect line items from grid
@@ -533,14 +684,14 @@ namespace VAR
                 if (itemNumber == 0) continue;
 
                 decimal matQty = ParseDecimal(row.Cells["MaterialQty"].Value);
-                decimal matCost = ParseDecimal(row.Cells["MaterialCost"].Value);
+                decimal matCost = ParseDecimalFromCurrency(row.Cells["MaterialCost"].Value);
                 decimal hourQty = ParseDecimal(row.Cells["HourlyQty"].Value);
                 decimal hourRate = 0;
 
                 string rateSelection = row.Cells["HourlyRate"].Value?.ToString() ?? "";
                 if (rateSelection == "Custom")
                 {
-                    hourRate = ParseDecimal(row.Cells["CustomRate"].Value);
+                    hourRate = ParseDecimalFromCurrency(row.Cells["CustomRate"].Value);
                 }
                 else if (!string.IsNullOrEmpty(rateSelection))
                 {
@@ -573,9 +724,13 @@ namespace VAR
                 int savedId = _dbHelper.SaveVariation(_variation, lineItems);
                 _variationId = savedId;
                 _hasUnsavedChanges = false;
+                ComputeDataHash();
 
-                MessageBox.Show("Variation saved successfully!", "Success",
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                // Show temporary "Saved" message
+                lblSaveStatus.Text = "Saved ✓";
+                lblSaveStatus.Visible = true;
+                saveStatusTimer.Stop();
+                saveStatusTimer.Start();
             }
             catch (Exception ex)
             {
@@ -591,7 +746,8 @@ namespace VAR
 
         private void VariationEditorForm_FormClosing(object? sender, FormClosingEventArgs e)
         {
-            if (_hasUnsavedChanges)
+            // Check if there are actual changes, not just the flag
+            if (HasActualChanges())
             {
                 var result = MessageBox.Show(
                     "You have unsaved changes. Do you want to save before closing?",
@@ -602,7 +758,7 @@ namespace VAR
                 if (result == DialogResult.Yes)
                 {
                     BtnSave_Click(sender, e);
-                    if (_hasUnsavedChanges) // Save failed
+                    if (HasActualChanges()) // Save failed
                     {
                         e.Cancel = true;
                     }

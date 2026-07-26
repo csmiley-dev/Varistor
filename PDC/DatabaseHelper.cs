@@ -143,13 +143,15 @@ namespace PDC
                 CREATE TABLE IF NOT EXISTS Variations (
                     Id INTEGER PRIMARY KEY AUTOINCREMENT,
                     VariationNumber TEXT NOT NULL UNIQUE,
-                    VariationName TEXT NOT NULL UNIQUE,
+                    VariationName TEXT NOT NULL,
                     VariationDate TEXT NOT NULL,
                     ClientContact TEXT,
                     IsApproved INTEGER DEFAULT 0,
                     ApprovedBy TEXT,
                     ApprovedDate TEXT,
-                    TotalValue REAL DEFAULT 0
+                    PurchaseOrder TEXT,
+                    TotalValue REAL DEFAULT 0,
+                    DisplayOrder INTEGER DEFAULT 0
                 );";
 
             string createLineItemsTable = @"

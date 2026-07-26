@@ -23,7 +23,11 @@ namespace VAR
         private Button btnNewVariation;
         private Button btnEditVariation;
         private Button btnDeleteVariation;
+        private Button btnDuplicateVariation;
+        private Button btnMoveUp;
+        private Button btnMoveDown;
         private Button btnRefresh;
+        private int _selectedRowIndex = -1;
 
         public SummaryForm()
         {
@@ -56,7 +60,7 @@ namespace VAR
                 Location = new Point(850, 20),
                 Size = new Size(300, 25),
                 Font = new Font("Arial", 10),
-                Text = $"Date: {DateTime.Now:yyyy-MM-dd}",
+                Text = $"Date: {DateTime.Now:dd-MM-yyyy}",
                 TextAlign = ContentAlignment.MiddleRight
             };
 
@@ -74,6 +78,8 @@ namespace VAR
             };
             dgvVariations.CellContentClick += DgvVariations_CellContentClick;
             dgvVariations.CellDoubleClick += DgvVariations_CellDoubleClick;
+            dgvVariations.CellEndEdit += DgvVariations_CellEndEdit;
+            dgvVariations.RowPrePaint += DgvVariations_RowPrePaint;
 
             // Buttons
             btnNewVariation = new Button
@@ -100,9 +106,33 @@ namespace VAR
             };
             btnDeleteVariation.Click += BtnDeleteVariation_Click;
 
-            btnRefresh = new Button
+            btnDuplicateVariation = new Button
             {
                 Location = new Point(500, 420),
+                Size = new Size(150, 35),
+                Text = "Duplicate Variation"
+            };
+            btnDuplicateVariation.Click += BtnDuplicateVariation_Click;
+
+            btnMoveUp = new Button
+            {
+                Location = new Point(660, 420),
+                Size = new Size(100, 35),
+                Text = "Move Up"
+            };
+            btnMoveUp.Click += BtnMoveUp_Click;
+
+            btnMoveDown = new Button
+            {
+                Location = new Point(770, 420),
+                Size = new Size(100, 35),
+                Text = "Move Down"
+            };
+            btnMoveDown.Click += BtnMoveDown_Click;
+
+            btnRefresh = new Button
+            {
+                Location = new Point(880, 420),
                 Size = new Size(150, 35),
                 Text = "Refresh"
             };
@@ -179,6 +209,9 @@ namespace VAR
             this.Controls.Add(btnNewVariation);
             this.Controls.Add(btnEditVariation);
             this.Controls.Add(btnDeleteVariation);
+            this.Controls.Add(btnDuplicateVariation);
+            this.Controls.Add(btnMoveUp);
+            this.Controls.Add(btnMoveDown);
             this.Controls.Add(btnRefresh);
             this.Controls.Add(grpAllVariations);
             this.Controls.Add(grpApprovedVariations);
@@ -196,28 +229,32 @@ namespace VAR
             {
                 DataPropertyName = "VariationNumber",
                 HeaderText = "Variation #",
-                Width = 100
+                Width = 100,
+                ReadOnly = true
             });
 
             dgvVariations.Columns.Add(new DataGridViewTextBoxColumn
             {
                 DataPropertyName = "VariationName",
                 HeaderText = "Name",
-                Width = 200
+                Width = 200,
+                ReadOnly = true
             });
 
             dgvVariations.Columns.Add(new DataGridViewTextBoxColumn
             {
                 DataPropertyName = "VariationDate",
                 HeaderText = "Date",
-                Width = 100
+                Width = 100,
+                ReadOnly = true
             });
 
             dgvVariations.Columns.Add(new DataGridViewTextBoxColumn
             {
                 DataPropertyName = "VariationType",
                 HeaderText = "Type",
-                Width = 100
+                Width = 100,
+                ReadOnly = true
             });
 
             dgvVariations.Columns.Add(new DataGridViewTextBoxColumn
@@ -225,28 +262,35 @@ namespace VAR
                 DataPropertyName = "TotalValue",
                 HeaderText = "Total Value",
                 Width = 120,
-                DefaultCellStyle = new DataGridViewCellStyle { Format = "C2" }
-            });
-
-            dgvVariations.Columns.Add(new DataGridViewCheckBoxColumn
-            {
-                DataPropertyName = "IsApproved",
-                HeaderText = "Approved",
-                Width = 80
+                DefaultCellStyle = new DataGridViewCellStyle { Format = "C2" },
+                ReadOnly = true
             });
 
             dgvVariations.Columns.Add(new DataGridViewTextBoxColumn
             {
                 DataPropertyName = "ApprovedBy",
                 HeaderText = "Approved By",
-                Width = 150
+                Width = 150,
+                ReadOnly = true,
+                Name = "ApprovedBy"
+            });
+
+            dgvVariations.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = "PurchaseOrder",
+                HeaderText = "Purchase Order",
+                Width = 150,
+                ReadOnly = false,
+                Name = "PurchaseOrder"
             });
 
             dgvVariations.Columns.Add(new DataGridViewTextBoxColumn
             {
                 DataPropertyName = "ApprovedDate",
                 HeaderText = "Approved Date",
-                Width = 150
+                Width = 150,
+                ReadOnly = true,
+                Name = "ApprovedDate"
             });
 
             // Add approve button column
@@ -255,7 +299,8 @@ namespace VAR
                 HeaderText = "Action",
                 Text = "Approve",
                 UseColumnTextForButtonValue = false,
-                Width = 100
+                Width = 100,
+                Name = "ActionButton"
             };
             dgvVariations.Columns.Add(approveButtonColumn);
 
@@ -271,17 +316,65 @@ namespace VAR
             lblApprovedCredits.Text = $"Approved Credits: {summary.ApprovedCredits:C2}";
             lblApprovedNetValue.Text = $"Approved Net Value: {summary.ApprovedNetValue:C2}";
 
-            // Update button text based on approval status
+            // Update button text and cell readonly status based on approval status
             for (int i = 0; i < dgvVariations.Rows.Count; i++)
             {
                 var variation = variations[i];
-                dgvVariations.Rows[i].Cells[8].Value = variation.IsApproved ? "Unapprove" : "Approve";
+                dgvVariations.Rows[i].Cells["ActionButton"].Value = variation.IsApproved ? "Unapprove" : "Approve";
+
+                // Make PurchaseOrder editable only if approved
+                dgvVariations.Rows[i].Cells["PurchaseOrder"].ReadOnly = !variation.IsApproved;
+                if (!variation.IsApproved)
+                {
+                    dgvVariations.Rows[i].Cells["PurchaseOrder"].Style.BackColor = Color.LightGray;
+                }
+            }
+
+            // Restore selection if we had one
+            if (_selectedRowIndex >= 0 && _selectedRowIndex < dgvVariations.Rows.Count)
+            {
+                dgvVariations.ClearSelection();
+                dgvVariations.Rows[_selectedRowIndex].Selected = true;
+                dgvVariations.FirstDisplayedScrollingRowIndex = _selectedRowIndex;
+            }
+        }
+
+        private void DgvVariations_RowPrePaint(object? sender, DataGridViewRowPrePaintEventArgs e)
+        {
+            var variations = _dbHelper.GetAllVariations();
+            if (e.RowIndex >= 0 && e.RowIndex < variations.Count)
+            {
+                var variation = variations[e.RowIndex];
+                if (variation.IsApproved)
+                {
+                    dgvVariations.Rows[e.RowIndex].DefaultCellStyle.BackColor = Color.LightGreen;
+                }
+            }
+        }
+
+        private void DgvVariations_CellEndEdit(object? sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0) return;
+
+            var columnName = dgvVariations.Columns[e.ColumnIndex].Name;
+            if (columnName == "PurchaseOrder")
+            {
+                var variations = _dbHelper.GetAllVariations();
+                var variation = variations[e.RowIndex];
+                var newPurchaseOrder = dgvVariations.Rows[e.RowIndex].Cells["PurchaseOrder"].Value?.ToString();
+
+                _dbHelper.UpdatePurchaseOrder(variation.Id, newPurchaseOrder);
             }
         }
 
         private void DgvVariations_CellContentClick(object? sender, DataGridViewCellEventArgs e)
         {
-            if (e.RowIndex < 0 || e.ColumnIndex != 8) return;
+            if (e.RowIndex < 0) return;
+
+            var columnName = dgvVariations.Columns[e.ColumnIndex].Name;
+            if (columnName != "ActionButton") return;
+
+            _selectedRowIndex = e.RowIndex;
 
             var variations = _dbHelper.GetAllVariations();
             var variation = variations[e.RowIndex];
@@ -313,7 +406,11 @@ namespace VAR
 
         private void DgvVariations_CellDoubleClick(object? sender, DataGridViewCellEventArgs e)
         {
-            if (e.RowIndex < 0 || e.ColumnIndex == 8) return;
+            if (e.RowIndex < 0) return;
+
+            var columnName = dgvVariations.Columns[e.ColumnIndex].Name;
+            if (columnName == "ActionButton") return;
+
             BtnEditVariation_Click(sender, e);
         }
 
@@ -335,8 +432,9 @@ namespace VAR
                 return;
             }
 
+            _selectedRowIndex = dgvVariations.SelectedRows[0].Index;
             var variations = _dbHelper.GetAllVariations();
-            var selectedVariation = variations[dgvVariations.SelectedRows[0].Index];
+            var selectedVariation = variations[_selectedRowIndex];
 
             var editorForm = new VariationEditorForm(_dbHelper, selectedVariation.Id);
             if (editorForm.ShowDialog() == DialogResult.OK)
@@ -354,8 +452,9 @@ namespace VAR
                 return;
             }
 
+            _selectedRowIndex = dgvVariations.SelectedRows[0].Index;
             var variations = _dbHelper.GetAllVariations();
-            var selectedVariation = variations[dgvVariations.SelectedRows[0].Index];
+            var selectedVariation = variations[_selectedRowIndex];
 
             var result = MessageBox.Show(
                 $"Are you sure you want to delete variation '{selectedVariation.VariationNumber} - {selectedVariation.VariationName}'?",
@@ -366,8 +465,109 @@ namespace VAR
             if (result == DialogResult.Yes)
             {
                 _dbHelper.DeleteVariation(selectedVariation.Id);
+                _selectedRowIndex = -1;
                 LoadData();
             }
+        }
+
+        private void BtnDuplicateVariation_Click(object? sender, EventArgs e)
+        {
+            if (dgvVariations.SelectedRows.Count == 0)
+            {
+                MessageBox.Show("Please select a variation to duplicate.", "No Selection",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            _selectedRowIndex = dgvVariations.SelectedRows[0].Index;
+            var variations = _dbHelper.GetAllVariations();
+            var selectedVariation = variations[_selectedRowIndex];
+
+            try
+            {
+                int newVariationId = _dbHelper.DuplicateVariation(selectedVariation.Id);
+                LoadData();
+
+                // Select the newly duplicated variation
+                for (int i = 0; i < dgvVariations.Rows.Count; i++)
+                {
+                    var vars = _dbHelper.GetAllVariations();
+                    if (vars[i].Id == newVariationId)
+                    {
+                        _selectedRowIndex = i;
+                        dgvVariations.ClearSelection();
+                        dgvVariations.Rows[i].Selected = true;
+                        dgvVariations.FirstDisplayedScrollingRowIndex = i;
+                        break;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error duplicating variation: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void BtnMoveUp_Click(object? sender, EventArgs e)
+        {
+            if (dgvVariations.SelectedRows.Count == 0)
+            {
+                MessageBox.Show("Please select a variation to move.", "No Selection",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            int currentIndex = dgvVariations.SelectedRows[0].Index;
+            if (currentIndex == 0)
+            {
+                MessageBox.Show("This variation is already at the top.", "Cannot Move",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var variations = _dbHelper.GetAllVariations();
+            var currentVariation = variations[currentIndex];
+            var previousVariation = variations[currentIndex - 1];
+
+            // Swap display orders
+            int tempOrder = currentVariation.DisplayOrder;
+            _dbHelper.UpdateDisplayOrder(currentVariation.Id, previousVariation.DisplayOrder);
+            _dbHelper.UpdateDisplayOrder(previousVariation.Id, tempOrder);
+
+            _selectedRowIndex = currentIndex - 1;
+            LoadData();
+        }
+
+        private void BtnMoveDown_Click(object? sender, EventArgs e)
+        {
+            if (dgvVariations.SelectedRows.Count == 0)
+            {
+                MessageBox.Show("Please select a variation to move.", "No Selection",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var variations = _dbHelper.GetAllVariations();
+            int currentIndex = dgvVariations.SelectedRows[0].Index;
+
+            if (currentIndex >= variations.Count - 1)
+            {
+                MessageBox.Show("This variation is already at the bottom.", "Cannot Move",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var currentVariation = variations[currentIndex];
+            var nextVariation = variations[currentIndex + 1];
+
+            // Swap display orders
+            int tempOrder = currentVariation.DisplayOrder;
+            _dbHelper.UpdateDisplayOrder(currentVariation.Id, nextVariation.DisplayOrder);
+            _dbHelper.UpdateDisplayOrder(nextVariation.Id, tempOrder);
+
+            _selectedRowIndex = currentIndex + 1;
+            LoadData();
         }
     }
 
