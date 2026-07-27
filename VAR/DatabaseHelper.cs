@@ -176,6 +176,14 @@ namespace VAR
 
                 if (variation.Id == 0)
                 {
+                    // Get the maximum DisplayOrder and add 1 for new variation (ensures it goes to the bottom)
+                    string getMaxOrder = "SELECT COALESCE(MAX(DisplayOrder), -1) FROM Variations";
+                    using (var maxCommand = new SQLiteCommand(getMaxOrder, connection))
+                    {
+                        int maxDisplayOrder = Convert.ToInt32(maxCommand.ExecuteScalar());
+                        variation.DisplayOrder = maxDisplayOrder + 1;
+                    }
+
                     // Insert new variation
                     string insertVariation = @"INSERT INTO Variations
                         (VariationNumber, VariationName, VariationDate, ClientContact, IsApproved, ApprovedBy, ApprovedDate, PurchaseOrder, TotalValue, DisplayOrder)
@@ -509,6 +517,18 @@ namespace VAR
             string update = "UPDATE Variations SET PurchaseOrder = @purchaseOrder WHERE Id = @id";
             using var command = new SQLiteCommand(update, connection);
             command.Parameters.AddWithValue("@purchaseOrder", (object?)purchaseOrder ?? DBNull.Value);
+            command.Parameters.AddWithValue("@id", variationId);
+            command.ExecuteNonQuery();
+        }
+
+        public void UpdateApprovedBy(int variationId, string approvedBy)
+        {
+            using var connection = new SQLiteConnection($"Data Source={_dbPath};Version=3;");
+            connection.Open();
+
+            string update = "UPDATE Variations SET ApprovedBy = @approvedBy WHERE Id = @id";
+            using var command = new SQLiteCommand(update, connection);
+            command.Parameters.AddWithValue("@approvedBy", approvedBy);
             command.Parameters.AddWithValue("@id", variationId);
             command.ExecuteNonQuery();
         }

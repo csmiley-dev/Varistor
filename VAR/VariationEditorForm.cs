@@ -26,6 +26,8 @@ namespace VAR
         private Button btnSave;
         private Button btnClose;
         private Button btnAddRow;
+        private Button btnMoveUp;
+        private Button btnMoveDown;
         private Label lblSaveStatus;
         private Timer saveStatusTimer;
         private string _originalDataHash = "";
@@ -167,6 +169,24 @@ namespace VAR
             };
             btnAddRow.Click += BtnAddRow_Click;
 
+            // Move Up Button
+            btnMoveUp = new Button
+            {
+                Text = "Move Up",
+                Location = new Point(leftMargin + 110, topMargin + rowHeight * 3 + 510),
+                Size = new Size(100, 30)
+            };
+            btnMoveUp.Click += BtnMoveUp_Click;
+
+            // Move Down Button
+            btnMoveDown = new Button
+            {
+                Text = "Move Down",
+                Location = new Point(leftMargin + 220, topMargin + rowHeight * 3 + 510),
+                Size = new Size(100, 30)
+            };
+            btnMoveDown.Click += BtnMoveDown_Click;
+
             // Subtotals
             lblMaterialSubtotal = new Label
             {
@@ -235,6 +255,8 @@ namespace VAR
             this.Controls.Add(cboClientContact);
             this.Controls.Add(dgvLineItems);
             this.Controls.Add(btnAddRow);
+            this.Controls.Add(btnMoveUp);
+            this.Controls.Add(btnMoveDown);
             this.Controls.Add(lblMaterialSubtotal);
             this.Controls.Add(lblLabourSubtotal);
             this.Controls.Add(lblGrandTotal);
@@ -265,7 +287,8 @@ namespace VAR
             {
                 Name = "ItemNumber",
                 HeaderText = "Item #",
-                Width = 60
+                Width = 60,
+                ReadOnly = true
             });
 
             dgvLineItems.Columns.Add(new DataGridViewTextBoxColumn
@@ -540,7 +563,7 @@ namespace VAR
 
         private void DgvLineItems_CellClick(object? sender, DataGridViewCellEventArgs e)
         {
-            if (e.RowIndex < 0) return;
+            if (e.RowIndex < 0 || e.ColumnIndex < 0) return;
 
             // Immediately open dropdown for combo box columns
             if (dgvLineItems.Columns[e.ColumnIndex] is DataGridViewComboBoxColumn)
@@ -653,17 +676,10 @@ namespace VAR
                 return;
             }
 
-            // Check for duplicates
+            // Check for duplicate variation number (only numbers need to be unique, not names)
             if (_dbHelper.VariationNumberExists(txtVariationNumber.Text, _variationId))
             {
                 MessageBox.Show("A variation with this number already exists.", "Duplicate Error",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            if (_dbHelper.VariationNameExists(txtVariationName.Text, _variationId))
-            {
-                MessageBox.Show("A variation with this name already exists.", "Duplicate Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
@@ -774,6 +790,69 @@ namespace VAR
                 else
                 {
                     this.DialogResult = DialogResult.Cancel;
+                }
+            }
+        }
+
+        private void RenumberItems()
+        {
+            for (int i = 0; i < dgvLineItems.Rows.Count; i++)
+            {
+                dgvLineItems.Rows[i].Cells["ItemNumber"].Value = i + 1;
+            }
+        }
+
+        private void BtnMoveUp_Click(object? sender, EventArgs e)
+        {
+            if (dgvLineItems.CurrentRow == null || dgvLineItems.CurrentRow.Index == 0)
+                return;
+
+            int currentIndex = dgvLineItems.CurrentRow.Index;
+
+            // Swap rows
+            var row1 = dgvLineItems.Rows[currentIndex];
+            var row2 = dgvLineItems.Rows[currentIndex - 1];
+            SwapRows(row1, row2);
+
+            // Move selection
+            dgvLineItems.CurrentCell = dgvLineItems.Rows[currentIndex - 1].Cells[1];
+
+            // Renumber all items
+            RenumberItems();
+            UpdateTotals();
+            _hasUnsavedChanges = true;
+        }
+
+        private void BtnMoveDown_Click(object? sender, EventArgs e)
+        {
+            if (dgvLineItems.CurrentRow == null || dgvLineItems.CurrentRow.Index >= dgvLineItems.Rows.Count - 1)
+                return;
+
+            int currentIndex = dgvLineItems.CurrentRow.Index;
+
+            // Swap rows
+            var row1 = dgvLineItems.Rows[currentIndex];
+            var row2 = dgvLineItems.Rows[currentIndex + 1];
+            SwapRows(row1, row2);
+
+            // Move selection
+            dgvLineItems.CurrentCell = dgvLineItems.Rows[currentIndex + 1].Cells[1];
+
+            // Renumber all items
+            RenumberItems();
+            UpdateTotals();
+            _hasUnsavedChanges = true;
+        }
+
+        private void SwapRows(DataGridViewRow row1, DataGridViewRow row2)
+        {
+            for (int i = 0; i < row1.Cells.Count; i++)
+            {
+                if (dgvLineItems.Columns[i].Name != "ItemNumber")
+                {
+                    object? temp = row1.Cells[i].Value;
+                    row1.Cells[i].Value = row2.Cells[i].Value;
+                    row2.Cells[i].Value = temp;
                 }
             }
         }

@@ -45,6 +45,7 @@ namespace VAR
             this.Text = "Varistor - Variations Manager";
             this.Size = new Size(1200, 700);
             this.StartPosition = FormStartPosition.CenterScreen;
+            this.Shown += SummaryForm_Shown;
 
             // Project Info
             lblProjectInfo = new Label
@@ -76,10 +77,13 @@ namespace VAR
                 MultiSelect = false,
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
             };
+            dgvVariations.DefaultCellStyle.SelectionBackColor = dgvVariations.DefaultCellStyle.BackColor;
+            dgvVariations.DefaultCellStyle.SelectionForeColor = dgvVariations.DefaultCellStyle.ForeColor;
             dgvVariations.CellContentClick += DgvVariations_CellContentClick;
             dgvVariations.CellDoubleClick += DgvVariations_CellDoubleClick;
             dgvVariations.CellEndEdit += DgvVariations_CellEndEdit;
             dgvVariations.RowPrePaint += DgvVariations_RowPrePaint;
+            dgvVariations.RowPostPaint += DgvVariations_RowPostPaint;
 
             // Buttons
             btnNewVariation = new Button
@@ -217,6 +221,12 @@ namespace VAR
             this.Controls.Add(grpApprovedVariations);
         }
 
+        private void SummaryForm_Shown(object? sender, EventArgs e)
+        {
+            // Refresh data when form is shown to ensure button text is visible
+            dgvVariations.Refresh();
+        }
+
         private void LoadData()
         {
             var variations = _dbHelper.GetAllVariations();
@@ -271,7 +281,7 @@ namespace VAR
                 DataPropertyName = "ApprovedBy",
                 HeaderText = "Approved By",
                 Width = 150,
-                ReadOnly = true,
+                ReadOnly = false,
                 Name = "ApprovedBy"
             });
 
@@ -300,7 +310,8 @@ namespace VAR
                 Text = "Approve",
                 UseColumnTextForButtonValue = false,
                 Width = 100,
-                Name = "ActionButton"
+                Name = "ActionButton",
+                FlatStyle = FlatStyle.Standard
             };
             dgvVariations.Columns.Add(approveButtonColumn);
 
@@ -322,11 +333,23 @@ namespace VAR
                 var variation = variations[i];
                 dgvVariations.Rows[i].Cells["ActionButton"].Value = variation.IsApproved ? "Unapprove" : "Approve";
 
-                // Make PurchaseOrder editable only if approved
+                // Make ApprovedBy and PurchaseOrder editable only if approved
+                dgvVariations.Rows[i].Cells["ApprovedBy"].ReadOnly = !variation.IsApproved;
                 dgvVariations.Rows[i].Cells["PurchaseOrder"].ReadOnly = !variation.IsApproved;
+
                 if (!variation.IsApproved)
                 {
+                    dgvVariations.Rows[i].Cells["ApprovedBy"].Style.BackColor = Color.LightGray;
+                    dgvVariations.Rows[i].Cells["ApprovedBy"].Style.SelectionBackColor = Color.LightGray;
                     dgvVariations.Rows[i].Cells["PurchaseOrder"].Style.BackColor = Color.LightGray;
+                    dgvVariations.Rows[i].Cells["PurchaseOrder"].Style.SelectionBackColor = Color.LightGray;
+                }
+                else
+                {
+                    dgvVariations.Rows[i].Cells["ApprovedBy"].Style.BackColor = Color.White;
+                    dgvVariations.Rows[i].Cells["ApprovedBy"].Style.SelectionBackColor = Color.White;
+                    dgvVariations.Rows[i].Cells["PurchaseOrder"].Style.BackColor = Color.White;
+                    dgvVariations.Rows[i].Cells["PurchaseOrder"].Style.SelectionBackColor = Color.White;
                 }
             }
 
@@ -348,6 +371,27 @@ namespace VAR
                 if (variation.IsApproved)
                 {
                     dgvVariations.Rows[e.RowIndex].DefaultCellStyle.BackColor = Color.LightGreen;
+                    dgvVariations.Rows[e.RowIndex].DefaultCellStyle.SelectionBackColor = Color.LightGreen;
+                }
+                else
+                {
+                    dgvVariations.Rows[e.RowIndex].DefaultCellStyle.BackColor = Color.White;
+                    dgvVariations.Rows[e.RowIndex].DefaultCellStyle.SelectionBackColor = Color.White;
+                }
+            }
+        }
+
+        private void DgvVariations_RowPostPaint(object? sender, DataGridViewRowPostPaintEventArgs e)
+        {
+            // Draw a border around the selected row
+            if (dgvVariations.Rows[e.RowIndex].Selected)
+            {
+                using (Pen pen = new Pen(Color.DarkBlue, 2))
+                {
+                    Rectangle rect = e.RowBounds;
+                    rect.Width -= 1;
+                    rect.Height -= 1;
+                    e.Graphics.DrawRectangle(pen, rect);
                 }
             }
         }
@@ -357,13 +401,21 @@ namespace VAR
             if (e.RowIndex < 0) return;
 
             var columnName = dgvVariations.Columns[e.ColumnIndex].Name;
+            var variations = _dbHelper.GetAllVariations();
+            var variation = variations[e.RowIndex];
+
             if (columnName == "PurchaseOrder")
             {
-                var variations = _dbHelper.GetAllVariations();
-                var variation = variations[e.RowIndex];
                 var newPurchaseOrder = dgvVariations.Rows[e.RowIndex].Cells["PurchaseOrder"].Value?.ToString();
-
                 _dbHelper.UpdatePurchaseOrder(variation.Id, newPurchaseOrder);
+            }
+            else if (columnName == "ApprovedBy")
+            {
+                var newApprovedBy = dgvVariations.Rows[e.RowIndex].Cells["ApprovedBy"].Value?.ToString();
+                if (!string.IsNullOrWhiteSpace(newApprovedBy))
+                {
+                    _dbHelper.UpdateApprovedBy(variation.Id, newApprovedBy);
+                }
             }
         }
 
@@ -409,7 +461,8 @@ namespace VAR
             if (e.RowIndex < 0) return;
 
             var columnName = dgvVariations.Columns[e.ColumnIndex].Name;
-            if (columnName == "ActionButton") return;
+            // Don't open editor on double-click for these columns
+            if (columnName == "ActionButton" || columnName == "ApprovedBy" || columnName == "PurchaseOrder") return;
 
             BtnEditVariation_Click(sender, e);
         }
@@ -417,10 +470,9 @@ namespace VAR
         private void BtnNewVariation_Click(object? sender, EventArgs e)
         {
             var editorForm = new VariationEditorForm(_dbHelper);
-            if (editorForm.ShowDialog() == DialogResult.OK)
-            {
-                LoadData();
-            }
+            editorForm.ShowDialog();
+            // Always refresh when editor closes, regardless of save status
+            LoadData();
         }
 
         private void BtnEditVariation_Click(object? sender, EventArgs e)
@@ -437,10 +489,9 @@ namespace VAR
             var selectedVariation = variations[_selectedRowIndex];
 
             var editorForm = new VariationEditorForm(_dbHelper, selectedVariation.Id);
-            if (editorForm.ShowDialog() == DialogResult.OK)
-            {
-                LoadData();
-            }
+            editorForm.ShowDialog();
+            // Always refresh when editor closes, regardless of save status
+            LoadData();
         }
 
         private void BtnDeleteVariation_Click(object? sender, EventArgs e)
@@ -527,13 +578,23 @@ namespace VAR
             }
 
             var variations = _dbHelper.GetAllVariations();
+
+            // Ensure all display orders are set correctly
+            for (int i = 0; i < variations.Count; i++)
+            {
+                if (variations[i].DisplayOrder != i)
+                {
+                    _dbHelper.UpdateDisplayOrder(variations[i].Id, i);
+                    variations[i].DisplayOrder = i;
+                }
+            }
+
             var currentVariation = variations[currentIndex];
             var previousVariation = variations[currentIndex - 1];
 
             // Swap display orders
-            int tempOrder = currentVariation.DisplayOrder;
-            _dbHelper.UpdateDisplayOrder(currentVariation.Id, previousVariation.DisplayOrder);
-            _dbHelper.UpdateDisplayOrder(previousVariation.Id, tempOrder);
+            _dbHelper.UpdateDisplayOrder(currentVariation.Id, currentIndex - 1);
+            _dbHelper.UpdateDisplayOrder(previousVariation.Id, currentIndex);
 
             _selectedRowIndex = currentIndex - 1;
             LoadData();
@@ -558,13 +619,22 @@ namespace VAR
                 return;
             }
 
+            // Ensure all display orders are set correctly
+            for (int i = 0; i < variations.Count; i++)
+            {
+                if (variations[i].DisplayOrder != i)
+                {
+                    _dbHelper.UpdateDisplayOrder(variations[i].Id, i);
+                    variations[i].DisplayOrder = i;
+                }
+            }
+
             var currentVariation = variations[currentIndex];
             var nextVariation = variations[currentIndex + 1];
 
             // Swap display orders
-            int tempOrder = currentVariation.DisplayOrder;
-            _dbHelper.UpdateDisplayOrder(currentVariation.Id, nextVariation.DisplayOrder);
-            _dbHelper.UpdateDisplayOrder(nextVariation.Id, tempOrder);
+            _dbHelper.UpdateDisplayOrder(currentVariation.Id, currentIndex + 1);
+            _dbHelper.UpdateDisplayOrder(nextVariation.Id, currentIndex);
 
             _selectedRowIndex = currentIndex + 1;
             LoadData();
