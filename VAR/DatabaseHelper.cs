@@ -306,8 +306,8 @@ namespace VAR
             connection.Open();
 
             string query = excludeId.HasValue
-                ? "SELECT COUNT(*) FROM Variations WHERE VariationNumber = @number AND Id != @excludeId"
-                : "SELECT COUNT(*) FROM Variations WHERE VariationNumber = @number";
+                ? "SELECT COUNT(*) FROM Variations WHERE TRIM(VariationNumber) = TRIM(@number) COLLATE NOCASE AND Id != @excludeId"
+                : "SELECT COUNT(*) FROM Variations WHERE TRIM(VariationNumber) = TRIM(@number) COLLATE NOCASE";
 
             using var command = new SQLiteCommand(query, connection);
             command.Parameters.AddWithValue("@number", variationNumber);

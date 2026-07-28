@@ -17,20 +17,20 @@ namespace VAR
                 if (!File.Exists(dbPath))
                 {
                     MessageBox.Show(
-                        $"Project database not found.\n\nLooking for: {dbPath}\n\nVAR must be run from a project's Variations folder that was created by PDC.\n\nIf you're testing, you need to:\n1. Run PDC first to create a project\n2. Then run VAR from that project's Variations folder",
+                        $"Project database not found.\n\nLooking for: {dbPath}\n\nVaristor must be run from a project's Variations folder that was created by PDC.\n\nIf you're testing, you need to:\n1. Run PDC first to create a project\n2. Then run Varistor from that project's Variations folder",
                         "Database Not Found",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Error);
                     return;
                 }
 
-                using var singleInstance = new SingleInstanceHelper("VAR_VariationsManager");
+                using var singleInstance = new SingleInstanceHelper("Varistor_VariationsManager");
 
                 if (!singleInstance.TryAcquire())
                 {
                     MessageBox.Show(
-                        "Another instance of VAR is already running. Please close it first.",
-                        "VAR Already Running",
+                        "Another instance of Varistor is already running. Please close it first.",
+                        "Varistor Already Running",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Warning);
                     return;
@@ -43,8 +43,8 @@ namespace VAR
             catch (Exception ex)
             {
                 MessageBox.Show(
-                    $"An error occurred while starting VAR:\n\n{ex.Message}\n\nStack Trace:\n{ex.StackTrace}",
-                    "VAR Startup Error",
+                    $"An error occurred while starting Varistor:\n\n{ex.Message}\n\nStack Trace:\n{ex.StackTrace}",
+                    "Varistor Startup Error",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
             }

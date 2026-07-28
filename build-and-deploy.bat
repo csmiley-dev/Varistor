@@ -17,10 +17,10 @@ if errorlevel 1 (
 echo              Done.
 
 echo.
-echo [Step 2/6] Building VAR (Release, Self-Contained)...
+echo [Step 2/6] Building Varistor (Release, Self-Contained)...
 dotnet publish VAR\VAR.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false
 if errorlevel 1 (
-    echo ERROR: Failed to build VAR
+    echo ERROR: Failed to build Varistor
     pause
     exit /b 1
 )
@@ -55,10 +55,10 @@ if errorlevel 1 (
 echo              Done.
 
 echo.
-echo [Step 6/6] Copying VAR to X:\BMS\Programs\VAR\ ...
+echo [Step 6/6] Copying Varistor to X:\BMS\Programs\VAR\ ...
 xcopy "VAR\bin\Release\net8.0-windows\win-x64\publish\*.*" "X:\BMS\Programs\VAR\" /Y /E /I /Q
 if errorlevel 1 (
-    echo ERROR: Failed to copy VAR files
+    echo ERROR: Failed to copy Varistor files
     pause
     exit /b 1
 )
@@ -76,13 +76,13 @@ echo ================================================
 echo.
 echo Deployed to:
 echo   X:\BMS\Programs\PDC\PDC.exe
-echo   X:\BMS\Programs\VAR\VAR.exe
+echo   X:\BMS\Programs\VAR\Varistor.exe
 echo   X:\Projects\PDC.lnk
 echo.
 echo USAGE:
 echo 1. Go to X:\Projects\
 echo 2. Double-click PDC.lnk
 echo 3. Create a new project
-echo 4. Use VAR.lnk in the project's Variations folder
+echo 4. Use Varistor.lnk in the project's Variations folder
 echo.
 pause

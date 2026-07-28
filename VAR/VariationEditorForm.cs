@@ -25,6 +25,7 @@ namespace VAR
         private Label lblGrandTotal;
         private Button btnSave;
         private Button btnClose;
+        private Button btnPrint;
         private Button btnAddRow;
         private Button btnMoveUp;
         private Button btnMoveDown;
@@ -71,6 +72,7 @@ namespace VAR
             this.FormClosing += VariationEditorForm_FormClosing;
             this.KeyPreview = true;
             this.KeyDown += VariationEditorForm_KeyDown;
+            this.BackColor = Color.FromArgb(240, 240, 245);
 
             int leftMargin = 20;
             int topMargin = 20;
@@ -83,13 +85,16 @@ namespace VAR
             {
                 Text = "Variation Number:",
                 Location = new Point(leftMargin, topMargin),
-                Size = new Size(labelWidth, 20)
+                Size = new Size(labelWidth, 20),
+                Font = new Font("Arial", 10, FontStyle.Bold),
+                ForeColor = Color.FromArgb(60, 60, 60)
             };
             txtVariationNumber = new TextBox
             {
                 Location = new Point(leftMargin + labelWidth, topMargin),
                 Size = new Size(controlWidth, 20),
-                Text = _variation.VariationNumber
+                Text = _variation.VariationNumber,
+                Font = new Font("Arial", 10)
             };
             txtVariationNumber.TextChanged += Control_Changed;
 
@@ -98,13 +103,16 @@ namespace VAR
             {
                 Text = "Variation Name:",
                 Location = new Point(leftMargin, topMargin + rowHeight),
-                Size = new Size(labelWidth, 20)
+                Size = new Size(labelWidth, 20),
+                Font = new Font("Arial", 10, FontStyle.Bold),
+                ForeColor = Color.FromArgb(60, 60, 60)
             };
             txtVariationName = new TextBox
             {
                 Location = new Point(leftMargin + labelWidth, topMargin + rowHeight),
                 Size = new Size(controlWidth, 20),
-                Text = _variation.VariationName
+                Text = _variation.VariationName,
+                Font = new Font("Arial", 10)
             };
             txtVariationName.TextChanged += Control_Changed;
 
@@ -113,14 +121,17 @@ namespace VAR
             {
                 Text = "Date:",
                 Location = new Point(leftMargin + 400, topMargin),
-                Size = new Size(labelWidth, 20)
+                Size = new Size(labelWidth, 20),
+                Font = new Font("Arial", 10, FontStyle.Bold),
+                ForeColor = Color.FromArgb(60, 60, 60)
             };
             dtpVariationDate = new DateTimePicker
             {
                 Location = new Point(leftMargin + 400 + labelWidth, topMargin),
                 Size = new Size(controlWidth, 20),
                 Format = DateTimePickerFormat.Custom,
-                CustomFormat = "dd-MM-yyyy"
+                CustomFormat = "dd-MM-yyyy",
+                Font = new Font("Arial", 10)
             };
             DateTime.TryParse(_variation.VariationDate, out DateTime variationDate);
             dtpVariationDate.Value = variationDate == DateTime.MinValue ? DateTime.Now : variationDate;
@@ -131,13 +142,16 @@ namespace VAR
             {
                 Text = "Client Contact:",
                 Location = new Point(leftMargin + 400, topMargin + rowHeight),
-                Size = new Size(labelWidth, 20)
+                Size = new Size(labelWidth, 20),
+                Font = new Font("Arial", 10, FontStyle.Bold),
+                ForeColor = Color.FromArgb(60, 60, 60)
             };
             cboClientContact = new ComboBox
             {
                 Location = new Point(leftMargin + 400 + labelWidth, topMargin + rowHeight),
                 Size = new Size(controlWidth, 20),
-                DropDownStyle = ComboBoxStyle.DropDown
+                DropDownStyle = ComboBoxStyle.DropDown,
+                Font = new Font("Arial", 10)
             };
             cboClientContact.SelectedIndexChanged += Control_Changed;
             cboClientContact.TextChanged += Control_Changed;
@@ -165,26 +179,41 @@ namespace VAR
             {
                 Text = "Add Row",
                 Location = new Point(leftMargin, topMargin + rowHeight * 3 + 510),
-                Size = new Size(100, 30)
+                Size = new Size(100, 30),
+                BackColor = Color.FromArgb(60, 179, 113),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Arial", 9, FontStyle.Bold)
             };
+            btnAddRow.FlatAppearance.BorderSize = 0;
             btnAddRow.Click += BtnAddRow_Click;
 
             // Move Up Button
             btnMoveUp = new Button
             {
-                Text = "Move Up",
+                Text = "Move Up ↑",
                 Location = new Point(leftMargin + 110, topMargin + rowHeight * 3 + 510),
-                Size = new Size(100, 30)
+                Size = new Size(100, 30),
+                BackColor = Color.FromArgb(100, 149, 237),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Arial", 9, FontStyle.Bold)
             };
+            btnMoveUp.FlatAppearance.BorderSize = 0;
             btnMoveUp.Click += BtnMoveUp_Click;
 
             // Move Down Button
             btnMoveDown = new Button
             {
-                Text = "Move Down",
+                Text = "Move Down ↓",
                 Location = new Point(leftMargin + 220, topMargin + rowHeight * 3 + 510),
-                Size = new Size(100, 30)
+                Size = new Size(110, 30),
+                BackColor = Color.FromArgb(100, 149, 237),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Arial", 9, FontStyle.Bold)
             };
+            btnMoveDown.FlatAppearance.BorderSize = 0;
             btnMoveDown.Click += BtnMoveDown_Click;
 
             // Subtotals
@@ -212,29 +241,53 @@ namespace VAR
             // Buttons
             btnSave = new Button
             {
-                Text = "Save (Ctrl+S)",
+                Text = "💾 Save (Ctrl+S)",
                 Location = new Point(leftMargin + 450, topMargin + rowHeight * 3 + 590),
-                Size = new Size(120, 35)
+                Size = new Size(120, 35),
+                BackColor = Color.FromArgb(34, 139, 34),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Arial", 9, FontStyle.Bold)
             };
+            btnSave.FlatAppearance.BorderSize = 0;
             btnSave.Click += BtnSave_Click;
 
             btnClose = new Button
             {
                 Text = "Close",
                 Location = new Point(leftMargin + 580, topMargin + rowHeight * 3 + 590),
-                Size = new Size(120, 35)
+                Size = new Size(120, 35),
+                BackColor = Color.FromArgb(128, 128, 128),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Arial", 9, FontStyle.Bold)
             };
+            btnClose.FlatAppearance.BorderSize = 0;
             btnClose.Click += BtnClose_Click;
+
+            btnPrint = new Button
+            {
+                Text = "📄 Print PDF",
+                Location = new Point(leftMargin + 710, topMargin + rowHeight * 3 + 590),
+                Size = new Size(120, 35),
+                BackColor = Color.FromArgb(70, 130, 180),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Arial", 9, FontStyle.Bold)
+            };
+            btnPrint.FlatAppearance.BorderSize = 0;
+            btnPrint.Click += BtnPrint_Click;
 
             // Save status label
             lblSaveStatus = new Label
             {
-                Location = new Point(leftMargin + 710, topMargin + rowHeight * 3 + 600),
+                Location = new Point(leftMargin + 450, topMargin + rowHeight * 3 + 560),
                 Size = new Size(150, 25),
                 Font = new Font("Arial", 11, FontStyle.Bold),
                 ForeColor = Color.Green,
                 Text = "",
-                Visible = false
+                Visible = false,
+                BackColor = Color.Transparent
             };
 
             // Timer for hiding save status
@@ -262,6 +315,7 @@ namespace VAR
             this.Controls.Add(lblGrandTotal);
             this.Controls.Add(btnSave);
             this.Controls.Add(btnClose);
+            this.Controls.Add(btnPrint);
             this.Controls.Add(lblSaveStatus);
         }
 
@@ -739,6 +793,7 @@ namespace VAR
             {
                 int savedId = _dbHelper.SaveVariation(_variation, lineItems);
                 _variationId = savedId;
+                _variation.Id = savedId;  // Important: Update the variation object's ID
                 _hasUnsavedChanges = false;
                 ComputeDataHash();
 
@@ -758,6 +813,37 @@ namespace VAR
         private void BtnClose_Click(object? sender, EventArgs e)
         {
             this.Close();
+        }
+
+        private void BtnPrint_Click(object? sender, EventArgs e)
+        {
+            try
+            {
+                if (_variationId == null)
+                {
+                    MessageBox.Show("Please save the variation first before printing.", "Cannot Print",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                string outputFolder = System.IO.Directory.GetCurrentDirectory();
+                var pdfGenerator = new PdfGenerator(_dbHelper, outputFolder);
+                string filePath = pdfGenerator.GenerateVariationPdf(_variationId.Value);
+
+                MessageBox.Show($"Variation PDF generated successfully!\n\nSaved to: {filePath}", "Success",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = filePath,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error generating PDF: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void VariationEditorForm_FormClosing(object? sender, FormClosingEventArgs e)

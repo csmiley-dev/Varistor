@@ -27,6 +27,7 @@ namespace VAR
         private Button btnMoveUp;
         private Button btnMoveDown;
         private Button btnRefresh;
+        private Button btnPrintSummary;
         private int _selectedRowIndex = -1;
 
         public SummaryForm()
@@ -45,6 +46,7 @@ namespace VAR
             this.Text = "Varistor - Variations Manager";
             this.Size = new Size(1200, 700);
             this.StartPosition = FormStartPosition.CenterScreen;
+            this.BackColor = Color.FromArgb(240, 240, 245);
             this.Shown += SummaryForm_Shown;
 
             // Project Info
@@ -137,10 +139,23 @@ namespace VAR
             btnRefresh = new Button
             {
                 Location = new Point(880, 420),
-                Size = new Size(150, 35),
+                Size = new Size(100, 35),
                 Text = "Refresh"
             };
             btnRefresh.Click += (s, e) => LoadData();
+
+            btnPrintSummary = new Button
+            {
+                Location = new Point(990, 420),
+                Size = new Size(150, 35),
+                Text = "📄 Print Summary",
+                BackColor = Color.FromArgb(70, 130, 180),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Arial", 10, FontStyle.Bold)
+            };
+            btnPrintSummary.FlatAppearance.BorderSize = 0;
+            btnPrintSummary.Click += BtnPrintSummary_Click;
 
             // Summary boxes
             grpAllVariations = new GroupBox
@@ -217,14 +232,15 @@ namespace VAR
             this.Controls.Add(btnMoveUp);
             this.Controls.Add(btnMoveDown);
             this.Controls.Add(btnRefresh);
+            this.Controls.Add(btnPrintSummary);
             this.Controls.Add(grpAllVariations);
             this.Controls.Add(grpApprovedVariations);
         }
 
         private void SummaryForm_Shown(object? sender, EventArgs e)
         {
-            // Refresh data when form is shown to ensure button text is visible
-            dgvVariations.Refresh();
+            // Reload data when form is shown to ensure button text is visible
+            LoadData();
         }
 
         private void LoadData()
@@ -302,6 +318,17 @@ namespace VAR
                 ReadOnly = true,
                 Name = "ApprovedDate"
             });
+
+            // Add print button column
+            var printButtonColumn = new DataGridViewButtonColumn
+            {
+                HeaderText = "Print",
+                Text = "📄",
+                UseColumnTextForButtonValue = true,
+                Width = 60,
+                Name = "PrintButton"
+            };
+            dgvVariations.Columns.Add(printButtonColumn);
 
             // Add approve button column
             var approveButtonColumn = new DataGridViewButtonColumn
@@ -424,12 +451,19 @@ namespace VAR
             if (e.RowIndex < 0) return;
 
             var columnName = dgvVariations.Columns[e.ColumnIndex].Name;
+            var variations = _dbHelper.GetAllVariations();
+            var variation = variations[e.RowIndex];
+
+            // Handle Print button click
+            if (columnName == "PrintButton")
+            {
+                PrintVariation(variation.Id);
+                return;
+            }
+
             if (columnName != "ActionButton") return;
 
             _selectedRowIndex = e.RowIndex;
-
-            var variations = _dbHelper.GetAllVariations();
-            var variation = variations[e.RowIndex];
 
             if (variation.IsApproved)
             {
@@ -638,6 +672,56 @@ namespace VAR
 
             _selectedRowIndex = currentIndex + 1;
             LoadData();
+        }
+
+        private void BtnPrintSummary_Click(object? sender, EventArgs e)
+        {
+            try
+            {
+                string outputFolder = System.IO.Directory.GetCurrentDirectory();
+                var pdfGenerator = new PdfGenerator(_dbHelper, outputFolder);
+                string filePath = pdfGenerator.GenerateSummaryPdf();
+
+                MessageBox.Show($"Summary PDF generated successfully!\n\nSaved to: {filePath}", "Success",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                // Open the PDF
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = filePath,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error generating PDF: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void PrintVariation(int variationId)
+        {
+            try
+            {
+                string outputFolder = System.IO.Directory.GetCurrentDirectory();
+                var pdfGenerator = new PdfGenerator(_dbHelper, outputFolder);
+                string filePath = pdfGenerator.GenerateVariationPdf(variationId);
+
+                MessageBox.Show($"Variation PDF generated successfully!\n\nSaved to: {filePath}", "Success",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                // Open the PDF
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = filePath,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error generating PDF: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
     }
 

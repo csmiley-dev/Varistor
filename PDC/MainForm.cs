@@ -272,16 +272,16 @@ namespace PDC
                 Directory.CreateDirectory(fullPath);
             }
 
-            // Create shortcut to VAR instead of copying all files
+            // Create shortcut to Varistor instead of copying all files
             string variationsFolder = Path.Combine(projectPath, "Variations");
             string varSourceFolder = @"X:\BMS\Programs\VAR";
-            string varExePath = Path.Combine(varSourceFolder, "VAR.exe");
+            string varExePath = Path.Combine(varSourceFolder, "Varistor.exe");
 
             if (File.Exists(varExePath))
             {
-                // Create shortcut to centralized VAR
+                // Create shortcut to centralized Varistor
                 CreateShortcut(
-                    Path.Combine(variationsFolder, "VAR.lnk"),
+                    Path.Combine(variationsFolder, "Varistor.lnk"),
                     varExePath,
                     variationsFolder  // Set working directory to Variations folder so it finds project.db
                 );
