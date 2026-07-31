@@ -122,11 +122,6 @@ namespace VAR
                         column.Item().PaddingTop(5).LineHorizontal(2).LineColor(Colors.Orange.Darken2);
                     }
                 });
-
-                row.RelativeItem().AlignRight().Column(column =>
-                {
-                    column.Item().Text($"Date: {DateTime.Now:dd-MM-yyyy}").FontSize(10);
-                });
             });
         }
 
@@ -209,10 +204,10 @@ namespace VAR
                 {
                     col.Item().Text($"Project: {projectInfo.ProjectName} {projectInfo.ProjectNumber}").FontSize(14).Bold();
                     col.Item().Text($"Client: {projectInfo.ClientName}").FontSize(12);
-                    col.Item().PaddingTop(5).Text($"Variation: {variation.VariationNumber} - {variation.VariationName}").FontSize(13).Bold();
-                    col.Item().Text($"Date: {variation.VariationDate}").FontSize(11);
                     if (!string.IsNullOrEmpty(variation.ClientContact))
                         col.Item().Text($"Contact: {variation.ClientContact}").FontSize(11);
+                    col.Item().PaddingTop(5).Text($"Variation: {variation.VariationNumber} - {variation.VariationName}").FontSize(13).Bold();
+                    col.Item().Text($"Date: {variation.VariationDate}").FontSize(11);
                 });
 
                 // Line Items Table

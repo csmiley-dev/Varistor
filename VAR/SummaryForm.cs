@@ -44,10 +44,12 @@ namespace VAR
         private void InitializeComponent()
         {
             this.Text = "Varistor - Variations Manager";
-            this.Size = new Size(1200, 700);
+            this.Size = new Size(1920, 1080);
             this.StartPosition = FormStartPosition.CenterScreen;
+            this.WindowState = FormWindowState.Maximized;
             this.BackColor = Color.FromArgb(240, 240, 245);
             this.Shown += SummaryForm_Shown;
+            this.Resize += SummaryForm_Resize;
 
             // Project Info
             lblProjectInfo = new Label
@@ -55,7 +57,8 @@ namespace VAR
                 Location = new Point(20, 20),
                 Size = new Size(800, 25),
                 Font = new Font("Arial", 12, FontStyle.Bold),
-                Text = $"Project: {_projectInfo.ProjectName} {_projectInfo.ProjectNumber} - Client: {_projectInfo.ClientName}"
+                Text = $"Project: {_projectInfo.ProjectName} {_projectInfo.ProjectNumber} - Client: {_projectInfo.ClientName}",
+                Anchor = AnchorStyles.Top | AnchorStyles.Left
             };
 
             lblDate = new Label
@@ -64,20 +67,22 @@ namespace VAR
                 Size = new Size(300, 25),
                 Font = new Font("Arial", 10),
                 Text = $"Date: {DateTime.Now:dd-MM-yyyy}",
-                TextAlign = ContentAlignment.MiddleRight
+                TextAlign = ContentAlignment.MiddleRight,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
 
             // DataGridView for variations
             dgvVariations = new DataGridView
             {
                 Location = new Point(20, 60),
-                Size = new Size(1150, 350),
+                Size = new Size(this.ClientSize.Width - 40, 350),
                 AllowUserToAddRows = false,
                 AllowUserToDeleteRows = false,
                 ReadOnly = false,
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
                 MultiSelect = false,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
             dgvVariations.DefaultCellStyle.SelectionBackColor = dgvVariations.DefaultCellStyle.BackColor;
             dgvVariations.DefaultCellStyle.SelectionForeColor = dgvVariations.DefaultCellStyle.ForeColor;
@@ -92,7 +97,8 @@ namespace VAR
             {
                 Location = new Point(20, 420),
                 Size = new Size(150, 35),
-                Text = "New Variation"
+                Text = "New Variation",
+                Anchor = AnchorStyles.Top | AnchorStyles.Left
             };
             btnNewVariation.Click += BtnNewVariation_Click;
 
@@ -100,7 +106,8 @@ namespace VAR
             {
                 Location = new Point(180, 420),
                 Size = new Size(150, 35),
-                Text = "Edit Variation"
+                Text = "Edit Variation",
+                Anchor = AnchorStyles.Top | AnchorStyles.Left
             };
             btnEditVariation.Click += BtnEditVariation_Click;
 
@@ -108,7 +115,8 @@ namespace VAR
             {
                 Location = new Point(340, 420),
                 Size = new Size(150, 35),
-                Text = "Delete Variation"
+                Text = "Delete Variation",
+                Anchor = AnchorStyles.Top | AnchorStyles.Left
             };
             btnDeleteVariation.Click += BtnDeleteVariation_Click;
 
@@ -116,7 +124,8 @@ namespace VAR
             {
                 Location = new Point(500, 420),
                 Size = new Size(150, 35),
-                Text = "Duplicate Variation"
+                Text = "Duplicate Variation",
+                Anchor = AnchorStyles.Top | AnchorStyles.Left
             };
             btnDuplicateVariation.Click += BtnDuplicateVariation_Click;
 
@@ -124,7 +133,8 @@ namespace VAR
             {
                 Location = new Point(660, 420),
                 Size = new Size(100, 35),
-                Text = "Move Up"
+                Text = "Move Up",
+                Anchor = AnchorStyles.Top | AnchorStyles.Left
             };
             btnMoveUp.Click += BtnMoveUp_Click;
 
@@ -132,7 +142,8 @@ namespace VAR
             {
                 Location = new Point(770, 420),
                 Size = new Size(100, 35),
-                Text = "Move Down"
+                Text = "Move Down",
+                Anchor = AnchorStyles.Top | AnchorStyles.Left
             };
             btnMoveDown.Click += BtnMoveDown_Click;
 
@@ -140,7 +151,8 @@ namespace VAR
             {
                 Location = new Point(880, 420),
                 Size = new Size(100, 35),
-                Text = "Refresh"
+                Text = "Refresh",
+                Anchor = AnchorStyles.Top | AnchorStyles.Left
             };
             btnRefresh.Click += (s, e) => LoadData();
 
@@ -152,7 +164,8 @@ namespace VAR
                 BackColor = Color.FromArgb(70, 130, 180),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Arial", 10, FontStyle.Bold)
+                Font = new Font("Arial", 10, FontStyle.Bold),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left
             };
             btnPrintSummary.FlatAppearance.BorderSize = 0;
             btnPrintSummary.Click += BtnPrintSummary_Click;
@@ -161,8 +174,9 @@ namespace VAR
             grpAllVariations = new GroupBox
             {
                 Location = new Point(20, 470),
-                Size = new Size(550, 150),
-                Text = "All Variations Summary"
+                Size = new Size((this.ClientSize.Width - 60) / 2, 150),
+                Text = "All Variations Summary",
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
 
             lblTotalAdditions = new Label
@@ -192,9 +206,10 @@ namespace VAR
 
             grpApprovedVariations = new GroupBox
             {
-                Location = new Point(600, 470),
-                Size = new Size(570, 150),
-                Text = "Approved Variations Summary"
+                Location = new Point((this.ClientSize.Width / 2) + 10, 470),
+                Size = new Size((this.ClientSize.Width - 60) / 2, 150),
+                Text = "Approved Variations Summary",
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
 
             lblApprovedAdditions = new Label
@@ -241,6 +256,27 @@ namespace VAR
         {
             // Reload data when form is shown to ensure button text is visible
             LoadData();
+        }
+
+        private void SummaryForm_Resize(object? sender, EventArgs e)
+        {
+            // Adjust lblDate position to stay on the right side
+            if (lblDate != null)
+            {
+                lblDate.Left = this.ClientSize.Width - lblDate.Width - 20;
+            }
+
+            // Adjust group box widths
+            if (grpAllVariations != null)
+            {
+                grpAllVariations.Width = (this.ClientSize.Width - 60) / 2;
+            }
+
+            if (grpApprovedVariations != null)
+            {
+                grpApprovedVariations.Width = (this.ClientSize.Width - 60) / 2;
+                grpApprovedVariations.Left = (this.ClientSize.Width / 2) + 10;
+            }
         }
 
         private void LoadData()

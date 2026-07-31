@@ -116,18 +116,37 @@ namespace VAR
             };
             txtVariationName.TextChanged += Control_Changed;
 
-            // Variation Date
+            // Client Contact (moved to top row, right side)
+            Label lblClientContact = new Label
+            {
+                Text = "Client Contact:",
+                Location = new Point(leftMargin + 400, topMargin),
+                Size = new Size(labelWidth, 20),
+                Font = new Font("Arial", 10, FontStyle.Bold),
+                ForeColor = Color.FromArgb(60, 60, 60)
+            };
+            cboClientContact = new ComboBox
+            {
+                Location = new Point(leftMargin + 400 + labelWidth, topMargin),
+                Size = new Size(controlWidth, 20),
+                DropDownStyle = ComboBoxStyle.DropDown,
+                Font = new Font("Arial", 10)
+            };
+            cboClientContact.SelectedIndexChanged += Control_Changed;
+            cboClientContact.TextChanged += Control_Changed;
+
+            // Variation Date (moved to second row, right side)
             Label lblVariationDate = new Label
             {
                 Text = "Date:",
-                Location = new Point(leftMargin + 400, topMargin),
+                Location = new Point(leftMargin + 400, topMargin + rowHeight),
                 Size = new Size(labelWidth, 20),
                 Font = new Font("Arial", 10, FontStyle.Bold),
                 ForeColor = Color.FromArgb(60, 60, 60)
             };
             dtpVariationDate = new DateTimePicker
             {
-                Location = new Point(leftMargin + 400 + labelWidth, topMargin),
+                Location = new Point(leftMargin + 400 + labelWidth, topMargin + rowHeight),
                 Size = new Size(controlWidth, 20),
                 Format = DateTimePickerFormat.Custom,
                 CustomFormat = "dd-MM-yyyy",
@@ -136,25 +155,6 @@ namespace VAR
             DateTime.TryParse(_variation.VariationDate, out DateTime variationDate);
             dtpVariationDate.Value = variationDate == DateTime.MinValue ? DateTime.Now : variationDate;
             dtpVariationDate.ValueChanged += Control_Changed;
-
-            // Client Contact
-            Label lblClientContact = new Label
-            {
-                Text = "Client Contact:",
-                Location = new Point(leftMargin + 400, topMargin + rowHeight),
-                Size = new Size(labelWidth, 20),
-                Font = new Font("Arial", 10, FontStyle.Bold),
-                ForeColor = Color.FromArgb(60, 60, 60)
-            };
-            cboClientContact = new ComboBox
-            {
-                Location = new Point(leftMargin + 400 + labelWidth, topMargin + rowHeight),
-                Size = new Size(controlWidth, 20),
-                DropDownStyle = ComboBoxStyle.DropDown,
-                Font = new Font("Arial", 10)
-            };
-            cboClientContact.SelectedIndexChanged += Control_Changed;
-            cboClientContact.TextChanged += Control_Changed;
 
             // Line Items Grid
             dgvLineItems = new DataGridView
