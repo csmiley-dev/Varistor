@@ -291,7 +291,7 @@ namespace VAR
             {
                 DataPropertyName = "VariationNumber",
                 HeaderText = "Variation #",
-                Width = 100,
+                Width = 90,
                 ReadOnly = true
             });
 
@@ -299,7 +299,7 @@ namespace VAR
             {
                 DataPropertyName = "VariationName",
                 HeaderText = "Name",
-                Width = 200,
+                Width = 250,
                 ReadOnly = true
             });
 
@@ -307,7 +307,7 @@ namespace VAR
             {
                 DataPropertyName = "VariationDate",
                 HeaderText = "Date",
-                Width = 100,
+                Width = 90,
                 ReadOnly = true
             });
 
@@ -315,7 +315,7 @@ namespace VAR
             {
                 DataPropertyName = "VariationType",
                 HeaderText = "Type",
-                Width = 100,
+                Width = 80,
                 ReadOnly = true
             });
 
@@ -323,7 +323,7 @@ namespace VAR
             {
                 DataPropertyName = "TotalValue",
                 HeaderText = "Total Value",
-                Width = 120,
+                Width = 100,
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "C2" },
                 ReadOnly = true
             });
@@ -332,7 +332,7 @@ namespace VAR
             {
                 DataPropertyName = "ApprovedBy",
                 HeaderText = "Approved By",
-                Width = 150,
+                Width = 120,
                 ReadOnly = false,
                 Name = "ApprovedBy"
             });
@@ -341,16 +341,25 @@ namespace VAR
             {
                 DataPropertyName = "PurchaseOrder",
                 HeaderText = "Purchase Order",
-                Width = 150,
+                Width = 120,
                 ReadOnly = false,
                 Name = "PurchaseOrder"
             });
 
             dgvVariations.Columns.Add(new DataGridViewTextBoxColumn
             {
+                DataPropertyName = "JobNumber",
+                HeaderText = "Job Number",
+                Width = 120,
+                ReadOnly = false,
+                Name = "JobNumber"
+            });
+
+            dgvVariations.Columns.Add(new DataGridViewTextBoxColumn
+            {
                 DataPropertyName = "ApprovedDate",
                 HeaderText = "Approved Date",
-                Width = 150,
+                Width = 130,
                 ReadOnly = true,
                 Name = "ApprovedDate"
             });
@@ -396,9 +405,10 @@ namespace VAR
                 var variation = variations[i];
                 dgvVariations.Rows[i].Cells["ActionButton"].Value = variation.IsApproved ? "Unapprove" : "Approve";
 
-                // Make ApprovedBy and PurchaseOrder editable only if approved
+                // Make ApprovedBy, PurchaseOrder, and JobNumber editable only if approved
                 dgvVariations.Rows[i].Cells["ApprovedBy"].ReadOnly = !variation.IsApproved;
                 dgvVariations.Rows[i].Cells["PurchaseOrder"].ReadOnly = !variation.IsApproved;
+                dgvVariations.Rows[i].Cells["JobNumber"].ReadOnly = !variation.IsApproved;
 
                 if (!variation.IsApproved)
                 {
@@ -406,6 +416,8 @@ namespace VAR
                     dgvVariations.Rows[i].Cells["ApprovedBy"].Style.SelectionBackColor = Color.LightGray;
                     dgvVariations.Rows[i].Cells["PurchaseOrder"].Style.BackColor = Color.LightGray;
                     dgvVariations.Rows[i].Cells["PurchaseOrder"].Style.SelectionBackColor = Color.LightGray;
+                    dgvVariations.Rows[i].Cells["JobNumber"].Style.BackColor = Color.LightGray;
+                    dgvVariations.Rows[i].Cells["JobNumber"].Style.SelectionBackColor = Color.LightGray;
                 }
                 else
                 {
@@ -413,6 +425,8 @@ namespace VAR
                     dgvVariations.Rows[i].Cells["ApprovedBy"].Style.SelectionBackColor = Color.White;
                     dgvVariations.Rows[i].Cells["PurchaseOrder"].Style.BackColor = Color.White;
                     dgvVariations.Rows[i].Cells["PurchaseOrder"].Style.SelectionBackColor = Color.White;
+                    dgvVariations.Rows[i].Cells["JobNumber"].Style.BackColor = Color.White;
+                    dgvVariations.Rows[i].Cells["JobNumber"].Style.SelectionBackColor = Color.White;
                 }
             }
 
@@ -471,6 +485,11 @@ namespace VAR
             {
                 var newPurchaseOrder = dgvVariations.Rows[e.RowIndex].Cells["PurchaseOrder"].Value?.ToString();
                 _dbHelper.UpdatePurchaseOrder(variation.Id, newPurchaseOrder);
+            }
+            else if (columnName == "JobNumber")
+            {
+                var newJobNumber = dgvVariations.Rows[e.RowIndex].Cells["JobNumber"].Value?.ToString();
+                _dbHelper.UpdateJobNumber(variation.Id, newJobNumber);
             }
             else if (columnName == "ApprovedBy")
             {

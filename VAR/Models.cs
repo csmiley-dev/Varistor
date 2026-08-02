@@ -20,6 +20,7 @@ namespace VAR
         public string? ApprovedBy { get; set; }
         public string? ApprovedDate { get; set; }
         public string? PurchaseOrder { get; set; }
+        public string? JobNumber { get; set; }
         public decimal TotalValue { get; set; }
         public int DisplayOrder { get; set; }
 

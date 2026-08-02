@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(cmd /c \"dir \"\"X:\\BMS\\Programs\\VAR\\*.exe\"\"\")",
-      "Bash(cmd /c dir X:)"
+      "Bash(cmd /c dir X:)",
+      "Bash(dotnet build:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []

@@ -150,6 +150,7 @@ namespace PDC
                     ApprovedBy TEXT,
                     ApprovedDate TEXT,
                     PurchaseOrder TEXT,
+                    JobNumber TEXT,
                     TotalValue REAL DEFAULT 0,
                     DisplayOrder INTEGER DEFAULT 0
                 );";
