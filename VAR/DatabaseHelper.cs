@@ -320,7 +320,7 @@ namespace VAR
             connection.Open();
 
             string update = @"UPDATE Variations SET
-                IsApproved = 1, ApprovedBy = @approvedBy, ApprovedDate = @approvedDate
+                IsApproved = 1, IsVoided = 0, ApprovedBy = @approvedBy, ApprovedDate = @approvedDate
                 WHERE Id = @id";
 
             using var command = new SQLiteCommand(update, connection);

@@ -98,6 +98,7 @@ namespace VAR
             dgvVariations.CellEndEdit += DgvVariations_CellEndEdit;
             dgvVariations.RowPrePaint += DgvVariations_RowPrePaint;
             dgvVariations.RowPostPaint += DgvVariations_RowPostPaint;
+            dgvVariations.EditingControlShowing += DgvVariations_EditingControlShowing;
 
             // Buttons
             btnNewVariation = new Button
@@ -433,9 +434,13 @@ namespace VAR
                 Name = "ActionCombo",
                 DisplayStyle = DataGridViewComboBoxDisplayStyle.ComboBox
             };
+            actionComboColumn.Items.Add("Pending");
+            actionComboColumn.Items.Add("Approved");
+            actionComboColumn.Items.Add("Voided");
             actionComboColumn.Items.Add("Approve");
             actionComboColumn.Items.Add("Void");
-            actionComboColumn.Items.Add("Unapprove/Unvoid");
+            actionComboColumn.Items.Add("Unapprove");
+            actionComboColumn.Items.Add("Unvoid");
             dgvVariations.Columns.Add(actionComboColumn);
 
             dgvVariations.DataSource = variations;
@@ -462,15 +467,15 @@ namespace VAR
                 // Set ComboBox value based on variation state
                 if (variation.IsVoided)
                 {
-                    dgvVariations.Rows[i].Cells["ActionCombo"].Value = "Unapprove/Unvoid";
+                    dgvVariations.Rows[i].Cells["ActionCombo"].Value = "Voided";
                 }
                 else if (variation.IsApproved)
                 {
-                    dgvVariations.Rows[i].Cells["ActionCombo"].Value = "Unapprove/Unvoid";
+                    dgvVariations.Rows[i].Cells["ActionCombo"].Value = "Approved";
                 }
                 else
                 {
-                    dgvVariations.Rows[i].Cells["ActionCombo"].Value = "Approve";
+                    dgvVariations.Rows[i].Cells["ActionCombo"].Value = "Pending";
                 }
 
                 // Make ApprovedBy, PurchaseOrder, and JobNumber editable if approved OR voided
@@ -602,6 +607,18 @@ namespace VAR
             }
         }
 
+        private void DgvVariations_EditingControlShowing(object? sender, DataGridViewEditingControlShowingEventArgs e)
+        {
+            if (dgvVariations.CurrentCell.OwningColumn.Name == "ActionCombo")
+            {
+                if (e.Control is ComboBox comboBox)
+                {
+                    comboBox.DropDownStyle = ComboBoxStyle.DropDownList;
+                    comboBox.DroppedDown = true;
+                }
+            }
+        }
+
         private void DgvVariations_CellValueChanged(object? sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex < 0) return;
@@ -616,6 +633,12 @@ namespace VAR
 
             var variation = _dbHelper.GetAllVariations()[e.RowIndex];
             var selectedValue = dgvVariations.Rows[e.RowIndex].Cells["ActionCombo"].Value?.ToString();
+
+            // Ignore display states
+            if (selectedValue == "Pending" || selectedValue == "Approved" || selectedValue == "Voided")
+            {
+                return;
+            }
 
             if (selectedValue == "Approve")
             {
@@ -645,7 +668,7 @@ namespace VAR
                     LoadData();
                 }
             }
-            else if (selectedValue == "Unapprove/Unvoid")
+            else if (selectedValue == "Unapprove" || selectedValue == "Unvoid")
             {
                 var result = MessageBox.Show(
                     "Are you sure you want to unapprove/unvoid this variation?",
@@ -670,9 +693,22 @@ namespace VAR
         {
             if (e.RowIndex < 0) return;
 
-            var columnName = dgvVariations.Columns[e.ColumnIndex].Name;
-            // Don't open editor on double-click for these columns
-            if (columnName == "ActionCombo" || columnName == "ApprovedBy" || columnName == "PurchaseOrder") return;
+            // Find the column index of "ApprovedBy"
+            int approvedByIndex = -1;
+            for (int i = 0; i < dgvVariations.Columns.Count; i++)
+            {
+                if (dgvVariations.Columns[i].Name == "ApprovedBy")
+                {
+                    approvedByIndex = i;
+                    break;
+                }
+            }
+
+            // If e.ColumnIndex >= ApprovedBy index, return early (don't open editor)
+            if (approvedByIndex >= 0 && e.ColumnIndex >= approvedByIndex)
+            {
+                return;
+            }
 
             BtnEditVariation_Click(sender, e);
         }
