@@ -291,7 +291,7 @@ namespace VAR
             {
                 DataPropertyName = "VariationNumber",
                 HeaderText = "Variation #",
-                Width = 90,
+                Width = 81,
                 ReadOnly = true
             });
 
@@ -299,7 +299,7 @@ namespace VAR
             {
                 DataPropertyName = "VariationName",
                 HeaderText = "Name",
-                Width = 250,
+                Width = 351,
                 ReadOnly = true
             });
 
@@ -307,7 +307,7 @@ namespace VAR
             {
                 DataPropertyName = "VariationDate",
                 HeaderText = "Date",
-                Width = 90,
+                Width = 81,
                 ReadOnly = true
             });
 
@@ -315,7 +315,7 @@ namespace VAR
             {
                 DataPropertyName = "VariationType",
                 HeaderText = "Type",
-                Width = 80,
+                Width = 72,
                 ReadOnly = true
             });
 
@@ -323,7 +323,7 @@ namespace VAR
             {
                 DataPropertyName = "TotalValue",
                 HeaderText = "Total Value",
-                Width = 100,
+                Width = 90,
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "C2" },
                 ReadOnly = true
             });
@@ -332,7 +332,7 @@ namespace VAR
             {
                 DataPropertyName = "ApprovedBy",
                 HeaderText = "Approved By",
-                Width = 120,
+                Width = 108,
                 ReadOnly = false,
                 Name = "ApprovedBy"
             });
@@ -341,7 +341,7 @@ namespace VAR
             {
                 DataPropertyName = "PurchaseOrder",
                 HeaderText = "Purchase Order",
-                Width = 120,
+                Width = 108,
                 ReadOnly = false,
                 Name = "PurchaseOrder"
             });
@@ -350,7 +350,7 @@ namespace VAR
             {
                 DataPropertyName = "JobNumber",
                 HeaderText = "Job Number",
-                Width = 120,
+                Width = 108,
                 ReadOnly = false,
                 Name = "JobNumber"
             });
@@ -359,7 +359,7 @@ namespace VAR
             {
                 DataPropertyName = "ApprovedDate",
                 HeaderText = "Approved Date",
-                Width = 130,
+                Width = 117,
                 ReadOnly = true,
                 Name = "ApprovedDate"
             });
@@ -370,7 +370,7 @@ namespace VAR
                 HeaderText = "Print",
                 Text = "📄",
                 UseColumnTextForButtonValue = true,
-                Width = 60,
+                Width = 54,
                 Name = "PrintButton"
             };
             dgvVariations.Columns.Add(printButtonColumn);
@@ -381,7 +381,7 @@ namespace VAR
                 HeaderText = "Action",
                 Text = "Approve",
                 UseColumnTextForButtonValue = false,
-                Width = 100,
+                Width = 90,
                 Name = "ActionButton",
                 FlatStyle = FlatStyle.Standard
             };
