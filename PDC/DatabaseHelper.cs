@@ -49,9 +49,25 @@ namespace PDC
         {
             var defaultClients = new Dictionary<string, List<string>>
             {
-                { "Client A", new List<string> { "John Smith", "Jane Doe" } },
-                { "Client B", new List<string> { "Bob Johnson", "Alice Williams" } },
-                { "Client C", new List<string> { "Charlie Brown", "Diana Prince" } }
+                { "Corbritt Air Conditioning", new List<string> { "Dale Moxon", "John Carmichael", "Jai Capsalis" } },
+                { "Specific Refrigeration Services", new List<string> { "Will McTaggart", "Alan Patterson", "Dale Pennington", "Steven Bennet" } },
+                { "Contract Air Conditioning", new List<string> { "Mick Eade", "Craig Townsend", "Jess Cole" } },
+                { "Jamair", new List<string> { "Bob Johnson", "Alice Williams" } },
+                { "Entire Mechanical Services", new List<string> { "Mitch Coen", "Brenton Roberts", "Josh Cunningham", "Arjit Bharti", "Phil Quick", "Joshua Lawson", "Jake Camilleri" } },
+                { "A.G. Coombs", new List<string> { "Michael Roberts", "Simon Frangiacomo", "Leigh McInneny" } },
+                { "Air Systems Engineering", new List<string> { "Bob Johnson", "Alice Williams" } },
+                { "Airmaster Australia", new List<string> { "Brendan Mann", "John Allan", "Ian Walker", "Clinton Richards", "Matt Allan", "Deviah Kalianda" } },
+                { "Apex Air", new List<string> { "Azz Fitzpatrick", "Justin Fitzpatrick" } },
+                { "Clydesdale Bros.", new List<string> { "Cameron Clydesdale", "Arlene Clydesdale" } },
+                { "Ellis Air Conditioning", new List<string> { "John Lalor", "Cameron Crowley", "Aljo Taffard-Phillips", "Gavin Webster", "Michael Demetriou", "Gary Ritchens" } },
+                { "Grosvenor Engineering Group", new List<string> { "Tristan Reichelt", "Daniel Johnstone", "Alan Cook" } },
+                { "Mechonik", new List<string> { "Nick Meade", "Tom Hrelja", "Victoria Totten", "James Lloyd" } },
+                { "O.P. Industries", new List<string> { "Jeremy Whitney", "Keith Pearson", "Darren McGrath", "Mark Wright", "Brendan Dozzi" } },
+                { "RACE Services", new List<string> { "Scott Ellis", "Hung Thai" } },
+                { "Quadrant Mechanical Services", new List<string> { "Aaron Mogg", "Darren Weymouth", "Ben Smith", "Tony Lee" } },
+                { "Auscool", new List<string> { "Andy Hume", "Ujjal Ghosh" } },
+                { "Fredon Mechanical Services", new List<string> { "James Torcasio", "Aaron Smith", "Adam McArdle", "Pierce Holstrom" } },
+                { "d&e Air Conditioning", new List<string> { "Prem Dcruz", "Nilesh Raj" } }
             };
 
             foreach (var client in defaultClients)
