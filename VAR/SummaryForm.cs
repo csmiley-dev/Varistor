@@ -87,11 +87,13 @@ namespace VAR
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
                 MultiSelect = false,
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                EditMode = DataGridViewEditMode.EditOnEnter,
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
             dgvVariations.DefaultCellStyle.SelectionBackColor = dgvVariations.DefaultCellStyle.BackColor;
             dgvVariations.DefaultCellStyle.SelectionForeColor = dgvVariations.DefaultCellStyle.ForeColor;
             dgvVariations.CellContentClick += DgvVariations_CellContentClick;
+            dgvVariations.CellClick += DgvVariations_CellClick;
             dgvVariations.CellValueChanged += DgvVariations_CellValueChanged;
             dgvVariations.CurrentCellDirtyStateChanged += DgvVariations_CurrentCellDirtyStateChanged;
             dgvVariations.CellDoubleClick += DgvVariations_CellDoubleClick;
@@ -437,10 +439,6 @@ namespace VAR
             actionComboColumn.Items.Add("Pending");
             actionComboColumn.Items.Add("Approved");
             actionComboColumn.Items.Add("Voided");
-            actionComboColumn.Items.Add("Approve");
-            actionComboColumn.Items.Add("Void");
-            actionComboColumn.Items.Add("Unapprove");
-            actionComboColumn.Items.Add("Unvoid");
             dgvVariations.Columns.Add(actionComboColumn);
 
             dgvVariations.DataSource = variations;
@@ -599,6 +597,25 @@ namespace VAR
             }
         }
 
+        private void DgvVariations_CellClick(object? sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0 || e.ColumnIndex < 0) return;
+            if (dgvVariations.Columns[e.ColumnIndex].Name != "ActionCombo") return;
+
+            var targetCell = dgvVariations.Rows[e.RowIndex].Cells[e.ColumnIndex];
+
+            // EditMode.EditOnEnter already opens the dropdown when CurrentCell changes to
+            // this cell. Only force it here for the edge case where the cell was already
+            // current (e.g. its dropdown was closed without changing row/column).
+            if (dgvVariations.CurrentCell == targetCell && dgvVariations.IsCurrentCellInEditMode)
+            {
+                return;
+            }
+
+            dgvVariations.CurrentCell = targetCell;
+            dgvVariations.BeginEdit(true);
+        }
+
         private void DgvVariations_CurrentCellDirtyStateChanged(object? sender, EventArgs e)
         {
             if (dgvVariations.IsCurrentCellDirty && dgvVariations.CurrentCell.OwningColumn.Name == "ActionCombo")
@@ -614,7 +631,18 @@ namespace VAR
                 if (e.Control is ComboBox comboBox)
                 {
                     comboBox.DropDownStyle = ComboBoxStyle.DropDownList;
-                    comboBox.DroppedDown = true;
+
+                    // The shared editing control isn't repositioned to the new cell until
+                    // after this event returns, so opening it immediately drops it down at
+                    // the previous cell's stale location. Defer until the control has been
+                    // moved and painted at the correct spot.
+                    comboBox.BeginInvoke(new Action(() =>
+                    {
+                        if (!comboBox.IsDisposed)
+                        {
+                            comboBox.DroppedDown = true;
+                        }
+                    }));
                 }
             }
         }
@@ -634,58 +662,43 @@ namespace VAR
             var variation = _dbHelper.GetAllVariations()[e.RowIndex];
             var selectedValue = dgvVariations.Rows[e.RowIndex].Cells["ActionCombo"].Value?.ToString();
 
-            // Ignore display states
-            if (selectedValue == "Pending" || selectedValue == "Approved" || selectedValue == "Voided")
+            string currentState = variation.IsVoided ? "Voided" : variation.IsApproved ? "Approved" : "Pending";
+            if (selectedValue == currentState)
             {
                 return;
             }
 
-            if (selectedValue == "Approve")
+            if (selectedValue == "Approved")
             {
                 var approvalForm = new ApprovalForm();
                 if (approvalForm.ShowDialog() == DialogResult.OK)
                 {
                     _dbHelper.ApproveVariation(variation.Id, approvalForm.ApprovedBy);
-                    LoadData();
                 }
-                else
-                {
-                    // User cancelled, reset the combo box
-                    LoadData();
-                }
+                LoadData();
             }
-            else if (selectedValue == "Void")
+            else if (selectedValue == "Voided")
             {
                 var voidForm = new VoidReasonForm();
                 if (voidForm.ShowDialog() == DialogResult.OK)
                 {
                     _dbHelper.VoidVariation(variation.Id, voidForm.VoidReason);
-                    LoadData();
                 }
-                else
-                {
-                    // User cancelled, reset the combo box
-                    LoadData();
-                }
+                LoadData();
             }
-            else if (selectedValue == "Unapprove" || selectedValue == "Unvoid")
+            else if (selectedValue == "Pending")
             {
                 var result = MessageBox.Show(
-                    "Are you sure you want to unapprove/unvoid this variation?",
-                    "Unapprove/Unvoid Variation",
+                    "Are you sure you want to set this variation back to pending?",
+                    "Revert to Pending",
                     MessageBoxButtons.YesNo,
                     MessageBoxIcon.Question);
 
                 if (result == DialogResult.Yes)
                 {
                     _dbHelper.UnapproveVariation(variation.Id);
-                    LoadData();
                 }
-                else
-                {
-                    // User cancelled, reset the combo box
-                    LoadData();
-                }
+                LoadData();
             }
         }
 
