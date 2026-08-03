@@ -14,12 +14,16 @@ namespace VAR
         private DataGridView dgvVariations;
         private GroupBox grpAllVariations;
         private GroupBox grpApprovedVariations;
+        private GroupBox grpVoidedVariations;
         private Label lblTotalAdditions;
         private Label lblTotalCredits;
         private Label lblNetValue;
         private Label lblApprovedAdditions;
         private Label lblApprovedCredits;
         private Label lblApprovedNetValue;
+        private Label lblVoidedAdditions;
+        private Label lblVoidedCredits;
+        private Label lblVoidedNetValue;
         private Button btnNewVariation;
         private Button btnEditVariation;
         private Button btnDeleteVariation;
@@ -209,6 +213,7 @@ namespace VAR
                 Location = new Point((this.ClientSize.Width / 2) + 10, 470),
                 Size = new Size((this.ClientSize.Width - 60) / 2, 150),
                 Text = "Approved Variations Summary",
+                BackColor = Color.FromArgb(230, 255, 230),
                 Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
 
@@ -237,6 +242,41 @@ namespace VAR
             grpApprovedVariations.Controls.Add(lblApprovedCredits);
             grpApprovedVariations.Controls.Add(lblApprovedNetValue);
 
+            // Voided Variations Summary GroupBox
+            grpVoidedVariations = new GroupBox
+            {
+                Location = new Point(20, 630),
+                Size = new Size(this.ClientSize.Width - 40, 150),
+                Text = "Voided Variations Summary",
+                BackColor = Color.FromArgb(255, 230, 230),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+            };
+
+            lblVoidedAdditions = new Label
+            {
+                Location = new Point(20, 30),
+                Size = new Size(500, 25),
+                Font = new Font("Arial", 10)
+            };
+
+            lblVoidedCredits = new Label
+            {
+                Location = new Point(20, 60),
+                Size = new Size(500, 25),
+                Font = new Font("Arial", 10)
+            };
+
+            lblVoidedNetValue = new Label
+            {
+                Location = new Point(20, 90),
+                Size = new Size(500, 25),
+                Font = new Font("Arial", 11, FontStyle.Bold)
+            };
+
+            grpVoidedVariations.Controls.Add(lblVoidedAdditions);
+            grpVoidedVariations.Controls.Add(lblVoidedCredits);
+            grpVoidedVariations.Controls.Add(lblVoidedNetValue);
+
             this.Controls.Add(lblProjectInfo);
             this.Controls.Add(lblDate);
             this.Controls.Add(dgvVariations);
@@ -250,6 +290,7 @@ namespace VAR
             this.Controls.Add(btnPrintSummary);
             this.Controls.Add(grpAllVariations);
             this.Controls.Add(grpApprovedVariations);
+            this.Controls.Add(grpVoidedVariations);
         }
 
         private void SummaryForm_Shown(object? sender, EventArgs e)
@@ -276,6 +317,11 @@ namespace VAR
             {
                 grpApprovedVariations.Width = (this.ClientSize.Width - 60) / 2;
                 grpApprovedVariations.Left = (this.ClientSize.Width / 2) + 10;
+            }
+
+            if (grpVoidedVariations != null)
+            {
+                grpVoidedVariations.Width = this.ClientSize.Width - 40;
             }
         }
 
@@ -331,7 +377,7 @@ namespace VAR
             dgvVariations.Columns.Add(new DataGridViewTextBoxColumn
             {
                 DataPropertyName = "ApprovedBy",
-                HeaderText = "Approved By",
+                HeaderText = "Approved By / Void Reason",
                 FillWeight = 108,
                 ReadOnly = false,
                 Name = "ApprovedBy"
@@ -375,17 +421,18 @@ namespace VAR
             };
             dgvVariations.Columns.Add(printButtonColumn);
 
-            // Add approve button column
-            var approveButtonColumn = new DataGridViewButtonColumn
+            // Add action ComboBox column
+            var actionComboColumn = new DataGridViewComboBoxColumn
             {
                 HeaderText = "Action",
-                Text = "Approve",
-                UseColumnTextForButtonValue = false,
                 FillWeight = 90,
-                Name = "ActionButton",
-                FlatStyle = FlatStyle.Standard
+                Name = "ActionCombo",
+                DisplayStyle = DataGridViewComboBoxDisplayStyle.ComboBox
             };
-            dgvVariations.Columns.Add(approveButtonColumn);
+            actionComboColumn.Items.Add("Approve");
+            actionComboColumn.Items.Add("Void");
+            actionComboColumn.Items.Add("Unapprove/Unvoid");
+            dgvVariations.Columns.Add(actionComboColumn);
 
             dgvVariations.DataSource = variations;
 
@@ -399,18 +446,36 @@ namespace VAR
             lblApprovedCredits.Text = $"Approved Credits: {summary.ApprovedCredits:C2}";
             lblApprovedNetValue.Text = $"Approved Net Value: {summary.ApprovedNetValue:C2}";
 
-            // Update button text and cell readonly status based on approval status
+            lblVoidedAdditions.Text = $"Voided Additions: {summary.VoidedAdditions:C2}";
+            lblVoidedCredits.Text = $"Voided Credits: {summary.VoidedCredits:C2}";
+            lblVoidedNetValue.Text = $"Voided Net Value: {summary.VoidedNetValue:C2}";
+
+            // Update ComboBox values and cell readonly status based on variation state
             for (int i = 0; i < dgvVariations.Rows.Count; i++)
             {
                 var variation = variations[i];
-                dgvVariations.Rows[i].Cells["ActionButton"].Value = variation.IsApproved ? "Unapprove" : "Approve";
 
-                // Make ApprovedBy, PurchaseOrder, and JobNumber editable only if approved
-                dgvVariations.Rows[i].Cells["ApprovedBy"].ReadOnly = !variation.IsApproved;
-                dgvVariations.Rows[i].Cells["PurchaseOrder"].ReadOnly = !variation.IsApproved;
-                dgvVariations.Rows[i].Cells["JobNumber"].ReadOnly = !variation.IsApproved;
+                // Set ComboBox value based on variation state
+                if (variation.IsVoided)
+                {
+                    dgvVariations.Rows[i].Cells["ActionCombo"].Value = "Unapprove/Unvoid";
+                }
+                else if (variation.IsApproved)
+                {
+                    dgvVariations.Rows[i].Cells["ActionCombo"].Value = "Unapprove/Unvoid";
+                }
+                else
+                {
+                    dgvVariations.Rows[i].Cells["ActionCombo"].Value = "Approve";
+                }
 
-                if (!variation.IsApproved)
+                // Make ApprovedBy, PurchaseOrder, and JobNumber editable if approved OR voided
+                bool isEditableState = variation.IsApproved || variation.IsVoided;
+                dgvVariations.Rows[i].Cells["ApprovedBy"].ReadOnly = !isEditableState;
+                dgvVariations.Rows[i].Cells["PurchaseOrder"].ReadOnly = !isEditableState;
+                dgvVariations.Rows[i].Cells["JobNumber"].ReadOnly = !isEditableState;
+
+                if (!isEditableState)
                 {
                     dgvVariations.Rows[i].Cells["ApprovedBy"].Style.BackColor = Color.LightGray;
                     dgvVariations.Rows[i].Cells["ApprovedBy"].Style.SelectionBackColor = Color.LightGray;
@@ -421,12 +486,13 @@ namespace VAR
                 }
                 else
                 {
-                    dgvVariations.Rows[i].Cells["ApprovedBy"].Style.BackColor = Color.White;
-                    dgvVariations.Rows[i].Cells["ApprovedBy"].Style.SelectionBackColor = Color.White;
-                    dgvVariations.Rows[i].Cells["PurchaseOrder"].Style.BackColor = Color.White;
-                    dgvVariations.Rows[i].Cells["PurchaseOrder"].Style.SelectionBackColor = Color.White;
-                    dgvVariations.Rows[i].Cells["JobNumber"].Style.BackColor = Color.White;
-                    dgvVariations.Rows[i].Cells["JobNumber"].Style.SelectionBackColor = Color.White;
+                    Color cellBackColor = variation.IsVoided ? Color.FromArgb(255, 230, 230) : Color.FromArgb(230, 255, 230);
+                    dgvVariations.Rows[i].Cells["ApprovedBy"].Style.BackColor = cellBackColor;
+                    dgvVariations.Rows[i].Cells["ApprovedBy"].Style.SelectionBackColor = cellBackColor;
+                    dgvVariations.Rows[i].Cells["PurchaseOrder"].Style.BackColor = cellBackColor;
+                    dgvVariations.Rows[i].Cells["PurchaseOrder"].Style.SelectionBackColor = cellBackColor;
+                    dgvVariations.Rows[i].Cells["JobNumber"].Style.BackColor = cellBackColor;
+                    dgvVariations.Rows[i].Cells["JobNumber"].Style.SelectionBackColor = cellBackColor;
                 }
             }
 
@@ -445,10 +511,15 @@ namespace VAR
             if (e.RowIndex >= 0 && e.RowIndex < variations.Count)
             {
                 var variation = variations[e.RowIndex];
-                if (variation.IsApproved)
+                if (variation.IsVoided)
                 {
-                    dgvVariations.Rows[e.RowIndex].DefaultCellStyle.BackColor = Color.LightGreen;
-                    dgvVariations.Rows[e.RowIndex].DefaultCellStyle.SelectionBackColor = Color.LightGreen;
+                    dgvVariations.Rows[e.RowIndex].DefaultCellStyle.BackColor = Color.FromArgb(255, 230, 230);
+                    dgvVariations.Rows[e.RowIndex].DefaultCellStyle.SelectionBackColor = Color.FromArgb(255, 230, 230);
+                }
+                else if (variation.IsApproved)
+                {
+                    dgvVariations.Rows[e.RowIndex].DefaultCellStyle.BackColor = Color.FromArgb(230, 255, 230);
+                    dgvVariations.Rows[e.RowIndex].DefaultCellStyle.SelectionBackColor = Color.FromArgb(230, 255, 230);
                 }
                 else
                 {
@@ -516,32 +587,62 @@ namespace VAR
                 return;
             }
 
-            if (columnName != "ActionButton") return;
-
-            _selectedRowIndex = e.RowIndex;
-
-            if (variation.IsApproved)
+            // Handle Action ComboBox selection
+            if (columnName == "ActionCombo")
             {
-                var result = MessageBox.Show(
-                    "Are you sure you want to unapprove this variation?",
-                    "Unapprove Variation",
-                    MessageBoxButtons.YesNo,
-                    MessageBoxIcon.Question);
+                _selectedRowIndex = e.RowIndex;
 
-                if (result == DialogResult.Yes)
+                var selectedValue = dgvVariations.Rows[e.RowIndex].Cells["ActionCombo"].Value?.ToString();
+
+                if (selectedValue == "Approve")
                 {
-                    _dbHelper.UnapproveVariation(variation.Id);
-                    LoadData();
+                    var approvalForm = new ApprovalForm();
+                    if (approvalForm.ShowDialog() == DialogResult.OK)
+                    {
+                        _dbHelper.ApproveVariation(variation.Id, approvalForm.ApprovedBy);
+                        LoadData();
+                    }
+                    else
+                    {
+                        // User cancelled, reset the combo box
+                        LoadData();
+                    }
                 }
-            }
-            else
-            {
-                var approvalForm = new ApprovalForm();
-                if (approvalForm.ShowDialog() == DialogResult.OK)
+                else if (selectedValue == "Void")
                 {
-                    _dbHelper.ApproveVariation(variation.Id, approvalForm.ApprovedBy);
-                    LoadData();
+                    var voidForm = new VoidReasonForm();
+                    if (voidForm.ShowDialog() == DialogResult.OK)
+                    {
+                        _dbHelper.VoidVariation(variation.Id, voidForm.VoidReason);
+                        LoadData();
+                    }
+                    else
+                    {
+                        // User cancelled, reset the combo box
+                        LoadData();
+                    }
                 }
+                else if (selectedValue == "Unapprove/Unvoid")
+                {
+                    var result = MessageBox.Show(
+                        "Are you sure you want to unapprove/unvoid this variation?",
+                        "Unapprove/Unvoid Variation",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question);
+
+                    if (result == DialogResult.Yes)
+                    {
+                        _dbHelper.UnapproveVariation(variation.Id);
+                        LoadData();
+                    }
+                    else
+                    {
+                        // User cancelled, reset the combo box
+                        LoadData();
+                    }
+                }
+
+                return;
             }
         }
 
@@ -551,7 +652,7 @@ namespace VAR
 
             var columnName = dgvVariations.Columns[e.ColumnIndex].Name;
             // Don't open editor on double-click for these columns
-            if (columnName == "ActionButton" || columnName == "ApprovedBy" || columnName == "PurchaseOrder") return;
+            if (columnName == "ActionCombo" || columnName == "ApprovedBy" || columnName == "PurchaseOrder") return;
 
             BtnEditVariation_Click(sender, e);
         }
@@ -852,6 +953,82 @@ namespace VAR
             }
 
             ApprovedBy = txtApprovedBy.Text.Trim();
+        }
+    }
+
+    public class VoidReasonForm : Form
+    {
+        private TextBox txtVoidReason;
+        private Button btnOK;
+        private Button btnCancel;
+
+        public string VoidReason { get; private set; } = "";
+
+        public VoidReasonForm()
+        {
+            InitializeComponent();
+        }
+
+        private void InitializeComponent()
+        {
+            this.Text = "Void Variation";
+            this.Size = new Size(400, 200);
+            this.FormBorderStyle = FormBorderStyle.FixedDialog;
+            this.MaximizeBox = false;
+            this.MinimizeBox = false;
+            this.StartPosition = FormStartPosition.CenterParent;
+
+            Label lblVoidReason = new Label
+            {
+                Text = "Void Reason:",
+                Location = new Point(20, 20),
+                Size = new Size(100, 20)
+            };
+
+            txtVoidReason = new TextBox
+            {
+                Location = new Point(20, 50),
+                Size = new Size(340, 60),
+                Multiline = true
+            };
+
+            btnOK = new Button
+            {
+                Text = "OK",
+                Location = new Point(130, 120),
+                Size = new Size(100, 30),
+                DialogResult = DialogResult.OK
+            };
+            btnOK.Click += BtnOK_Click;
+
+            btnCancel = new Button
+            {
+                Text = "Cancel",
+                Location = new Point(240, 120),
+                Size = new Size(100, 30),
+                DialogResult = DialogResult.Cancel
+            };
+
+            this.Controls.Add(lblVoidReason);
+            this.Controls.Add(txtVoidReason);
+            this.Controls.Add(btnOK);
+            this.Controls.Add(btnCancel);
+
+            this.AcceptButton = btnOK;
+            this.CancelButton = btnCancel;
+        }
+
+        private void BtnOK_Click(object? sender, EventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(txtVoidReason.Text))
+            {
+                MessageBox.Show("Please enter a void reason.", "Validation Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                this.DialogResult = DialogResult.None;
+                return;
+            }
+
+            VoidReason = txtVoidReason.Text.Trim();
         }
     }
 }
