@@ -81,7 +81,7 @@ namespace VAR
                 ReadOnly = false,
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
                 MultiSelect = false,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None,
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
             dgvVariations.DefaultCellStyle.SelectionBackColor = dgvVariations.DefaultCellStyle.BackColor;
