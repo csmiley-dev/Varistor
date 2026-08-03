@@ -8,6 +8,7 @@ namespace VAR
     {
         private DatabaseHelper _dbHelper;
         private ProjectInfo _projectInfo;
+        private bool _isLoadingData = false;
 
         private Label lblProjectInfo;
         private Label lblDate;
@@ -329,6 +330,7 @@ namespace VAR
 
         private void LoadData()
         {
+            _isLoadingData = true;
             var variations = _dbHelper.GetAllVariations();
 
             dgvVariations.Columns.Clear();
@@ -451,6 +453,8 @@ namespace VAR
             lblVoidedAdditions.Text = $"Voided Additions: {summary.VoidedAdditions:C2}";
             lblVoidedCredits.Text = $"Voided Credits: {summary.VoidedCredits:C2}";
             lblVoidedNetValue.Text = $"Voided Net Value: {summary.VoidedNetValue:C2}";
+
+            _isLoadingData = false;
 
             // Update ComboBox values and cell readonly status based on variation state
             for (int i = 0; i < dgvVariations.Rows.Count; i++)
@@ -601,6 +605,9 @@ namespace VAR
         private void DgvVariations_CellValueChanged(object? sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex < 0) return;
+
+            // Don't handle events while loading data
+            if (_isLoadingData) return;
 
             string? columnName = dgvVariations.Columns[e.ColumnIndex].Name;
 
