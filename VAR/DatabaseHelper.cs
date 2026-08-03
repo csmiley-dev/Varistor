@@ -43,7 +43,7 @@ namespace VAR
             connection.Open();
 
             string query = @"SELECT Id, VariationNumber, VariationName, VariationDate, ClientContact,
-                            IsApproved, ApprovedBy, ApprovedDate, PurchaseOrder, JobNumber, TotalValue, DisplayOrder
+                            IsApproved, IsVoided, ApprovedBy, ApprovedDate, PurchaseOrder, JobNumber, TotalValue, DisplayOrder
                             FROM Variations ORDER BY DisplayOrder, Id";
 
             using var command = new SQLiteCommand(query, connection);
@@ -59,12 +59,13 @@ namespace VAR
                     VariationDate = reader.GetString(3),
                     ClientContact = reader.IsDBNull(4) ? null : reader.GetString(4),
                     IsApproved = reader.GetInt32(5) == 1,
-                    ApprovedBy = reader.IsDBNull(6) ? null : reader.GetString(6),
-                    ApprovedDate = reader.IsDBNull(7) ? null : reader.GetString(7),
-                    PurchaseOrder = reader.IsDBNull(8) ? null : reader.GetString(8),
-                    JobNumber = reader.IsDBNull(9) ? null : reader.GetString(9),
-                    TotalValue = reader.GetDecimal(10),
-                    DisplayOrder = reader.IsDBNull(11) ? 0 : reader.GetInt32(11)
+                    IsVoided = reader.GetInt32(6) == 1,
+                    ApprovedBy = reader.IsDBNull(7) ? null : reader.GetString(7),
+                    ApprovedDate = reader.IsDBNull(8) ? null : reader.GetString(8),
+                    PurchaseOrder = reader.IsDBNull(9) ? null : reader.GetString(9),
+                    JobNumber = reader.IsDBNull(10) ? null : reader.GetString(10),
+                    TotalValue = reader.GetDecimal(11),
+                    DisplayOrder = reader.IsDBNull(12) ? 0 : reader.GetInt32(12)
                 });
             }
 
@@ -83,12 +84,16 @@ namespace VAR
                     summary.TotalAdditions += variation.TotalValue;
                     if (variation.IsApproved)
                         summary.ApprovedAdditions += variation.TotalValue;
+                    if (variation.IsVoided)
+                        summary.VoidedAdditions += variation.TotalValue;
                 }
                 else if (variation.TotalValue < 0)
                 {
                     summary.TotalCredits += variation.TotalValue;
                     if (variation.IsApproved)
                         summary.ApprovedCredits += variation.TotalValue;
+                    if (variation.IsVoided)
+                        summary.VoidedCredits += variation.TotalValue;
                 }
             }
 
@@ -101,7 +106,7 @@ namespace VAR
             connection.Open();
 
             string query = @"SELECT Id, VariationNumber, VariationName, VariationDate, ClientContact,
-                            IsApproved, ApprovedBy, ApprovedDate, PurchaseOrder, JobNumber, TotalValue, DisplayOrder
+                            IsApproved, IsVoided, ApprovedBy, ApprovedDate, PurchaseOrder, JobNumber, TotalValue, DisplayOrder
                             FROM Variations WHERE Id = @id";
 
             using var command = new SQLiteCommand(query, connection);
@@ -118,12 +123,13 @@ namespace VAR
                     VariationDate = reader.GetString(3),
                     ClientContact = reader.IsDBNull(4) ? null : reader.GetString(4),
                     IsApproved = reader.GetInt32(5) == 1,
-                    ApprovedBy = reader.IsDBNull(6) ? null : reader.GetString(6),
-                    ApprovedDate = reader.IsDBNull(7) ? null : reader.GetString(7),
-                    PurchaseOrder = reader.IsDBNull(8) ? null : reader.GetString(8),
-                    JobNumber = reader.IsDBNull(9) ? null : reader.GetString(9),
-                    TotalValue = reader.GetDecimal(10),
-                    DisplayOrder = reader.IsDBNull(11) ? 0 : reader.GetInt32(11)
+                    IsVoided = reader.GetInt32(6) == 1,
+                    ApprovedBy = reader.IsDBNull(7) ? null : reader.GetString(7),
+                    ApprovedDate = reader.IsDBNull(8) ? null : reader.GetString(8),
+                    PurchaseOrder = reader.IsDBNull(9) ? null : reader.GetString(9),
+                    JobNumber = reader.IsDBNull(10) ? null : reader.GetString(10),
+                    TotalValue = reader.GetDecimal(11),
+                    DisplayOrder = reader.IsDBNull(12) ? 0 : reader.GetInt32(12)
                 };
             }
 
@@ -188,8 +194,8 @@ namespace VAR
 
                     // Insert new variation
                     string insertVariation = @"INSERT INTO Variations
-                        (VariationNumber, VariationName, VariationDate, ClientContact, IsApproved, ApprovedBy, ApprovedDate, PurchaseOrder, JobNumber, TotalValue, DisplayOrder)
-                        VALUES (@number, @name, @date, @contact, @approved, @approvedBy, @approvedDate, @purchaseOrder, @jobNumber, @totalValue, @displayOrder)";
+                        (VariationNumber, VariationName, VariationDate, ClientContact, IsApproved, IsVoided, ApprovedBy, ApprovedDate, PurchaseOrder, JobNumber, TotalValue, DisplayOrder)
+                        VALUES (@number, @name, @date, @contact, @approved, @voided, @approvedBy, @approvedDate, @purchaseOrder, @jobNumber, @totalValue, @displayOrder)";
 
                     using var command = new SQLiteCommand(insertVariation, connection);
                     command.Parameters.AddWithValue("@number", variation.VariationNumber);
@@ -197,6 +203,7 @@ namespace VAR
                     command.Parameters.AddWithValue("@date", variation.VariationDate);
                     command.Parameters.AddWithValue("@contact", (object?)variation.ClientContact ?? DBNull.Value);
                     command.Parameters.AddWithValue("@approved", variation.IsApproved ? 1 : 0);
+                    command.Parameters.AddWithValue("@voided", variation.IsVoided ? 1 : 0);
                     command.Parameters.AddWithValue("@approvedBy", (object?)variation.ApprovedBy ?? DBNull.Value);
                     command.Parameters.AddWithValue("@approvedDate", (object?)variation.ApprovedDate ?? DBNull.Value);
                     command.Parameters.AddWithValue("@purchaseOrder", (object?)variation.PurchaseOrder ?? DBNull.Value);
@@ -212,7 +219,7 @@ namespace VAR
                     // Update existing variation
                     string updateVariation = @"UPDATE Variations SET
                         VariationNumber = @number, VariationName = @name, VariationDate = @date,
-                        ClientContact = @contact, IsApproved = @approved, ApprovedBy = @approvedBy,
+                        ClientContact = @contact, IsApproved = @approved, IsVoided = @voided, ApprovedBy = @approvedBy,
                         ApprovedDate = @approvedDate, PurchaseOrder = @purchaseOrder, JobNumber = @jobNumber, TotalValue = @totalValue, DisplayOrder = @displayOrder
                         WHERE Id = @id";
 
@@ -223,6 +230,7 @@ namespace VAR
                     command.Parameters.AddWithValue("@date", variation.VariationDate);
                     command.Parameters.AddWithValue("@contact", (object?)variation.ClientContact ?? DBNull.Value);
                     command.Parameters.AddWithValue("@approved", variation.IsApproved ? 1 : 0);
+                    command.Parameters.AddWithValue("@voided", variation.IsVoided ? 1 : 0);
                     command.Parameters.AddWithValue("@approvedBy", (object?)variation.ApprovedBy ?? DBNull.Value);
                     command.Parameters.AddWithValue("@approvedDate", (object?)variation.ApprovedDate ?? DBNull.Value);
                     command.Parameters.AddWithValue("@purchaseOrder", (object?)variation.PurchaseOrder ?? DBNull.Value);
@@ -296,11 +304,27 @@ namespace VAR
             connection.Open();
 
             string update = @"UPDATE Variations SET
-                IsApproved = 0, ApprovedBy = NULL, ApprovedDate = NULL, PurchaseOrder = NULL, JobNumber = NULL
+                IsApproved = 0, IsVoided = 0, ApprovedBy = NULL, ApprovedDate = NULL, PurchaseOrder = NULL, JobNumber = NULL
                 WHERE Id = @id";
 
             using var command = new SQLiteCommand(update, connection);
             command.Parameters.AddWithValue("@id", variationId);
+            command.ExecuteNonQuery();
+        }
+
+        public void VoidVariation(int variationId, string voidReason)
+        {
+            using var connection = new SQLiteConnection($"Data Source={_dbPath};Version=3;");
+            connection.Open();
+
+            string update = @"UPDATE Variations SET
+                IsVoided = 1, IsApproved = 0, ApprovedBy = @voidReason, ApprovedDate = @voidDate, PurchaseOrder = NULL, JobNumber = NULL
+                WHERE Id = @id";
+
+            using var command = new SQLiteCommand(update, connection);
+            command.Parameters.AddWithValue("@id", variationId);
+            command.Parameters.AddWithValue("@voidReason", voidReason);
+            command.Parameters.AddWithValue("@voidDate", DateTime.Now.ToString("dd-MM-yyyy"));
             command.ExecuteNonQuery();
         }
 
@@ -452,8 +476,8 @@ namespace VAR
 
                 // Insert duplicate variation
                 string insertVariation = @"INSERT INTO Variations
-                    (VariationNumber, VariationName, VariationDate, ClientContact, IsApproved, ApprovedBy, ApprovedDate, PurchaseOrder, JobNumber, TotalValue, DisplayOrder)
-                    VALUES (@number, @name, @date, @contact, 0, NULL, NULL, NULL, NULL, @totalValue, @displayOrder)";
+                    (VariationNumber, VariationName, VariationDate, ClientContact, IsApproved, IsVoided, ApprovedBy, ApprovedDate, PurchaseOrder, JobNumber, TotalValue, DisplayOrder)
+                    VALUES (@number, @name, @date, @contact, 0, 0, NULL, NULL, NULL, NULL, @totalValue, @displayOrder)";
 
                 using var command = new SQLiteCommand(insertVariation, connection);
                 command.Parameters.AddWithValue("@number", newVariationNumber);

@@ -163,6 +163,7 @@ namespace PDC
                     VariationDate TEXT NOT NULL,
                     ClientContact TEXT,
                     IsApproved INTEGER DEFAULT 0,
+                    IsVoided INTEGER DEFAULT 0,
                     ApprovedBy TEXT,
                     ApprovedDate TEXT,
                     PurchaseOrder TEXT,

@@ -17,6 +17,7 @@ namespace VAR
         public string VariationDate { get; set; } = "";
         public string? ClientContact { get; set; }
         public bool IsApproved { get; set; }
+        public bool IsVoided { get; set; }
         public string? ApprovedBy { get; set; }
         public string? ApprovedDate { get; set; }
         public string? PurchaseOrder { get; set; }
@@ -67,5 +68,9 @@ namespace VAR
         public decimal ApprovedAdditions { get; set; }
         public decimal ApprovedCredits { get; set; }
         public decimal ApprovedNetValue => ApprovedAdditions + ApprovedCredits;
+
+        public decimal VoidedAdditions { get; set; }
+        public decimal VoidedCredits { get; set; }
+        public decimal VoidedNetValue => VoidedAdditions + VoidedCredits;
     }
 }
