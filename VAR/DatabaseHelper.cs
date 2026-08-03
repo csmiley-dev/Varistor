@@ -12,6 +12,38 @@ namespace VAR
         public DatabaseHelper(string dbPath)
         {
             _dbPath = dbPath;
+            MigrateDatabase();
+        }
+
+        private void MigrateDatabase()
+        {
+            using var connection = new SQLiteConnection($"Data Source={_dbPath};Version=3;");
+            connection.Open();
+
+            // Check if IsVoided column exists, if not add it
+            string checkColumn = "PRAGMA table_info(Variations)";
+            using var checkCommand = new SQLiteCommand(checkColumn, connection);
+            using var reader = checkCommand.ExecuteReader();
+
+            bool hasIsVoided = false;
+            while (reader.Read())
+            {
+                string columnName = reader.GetString(1);
+                if (columnName == "IsVoided")
+                {
+                    hasIsVoided = true;
+                    break;
+                }
+            }
+            reader.Close();
+
+            // Add IsVoided column if it doesn't exist
+            if (!hasIsVoided)
+            {
+                string addColumn = "ALTER TABLE Variations ADD COLUMN IsVoided INTEGER DEFAULT 0";
+                using var alterCommand = new SQLiteCommand(addColumn, connection);
+                alterCommand.ExecuteNonQuery();
+            }
         }
 
         public ProjectInfo GetProjectInfo()
