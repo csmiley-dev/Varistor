@@ -81,7 +81,7 @@ namespace VAR
                 ReadOnly = false,
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
                 MultiSelect = false,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
             dgvVariations.DefaultCellStyle.SelectionBackColor = dgvVariations.DefaultCellStyle.BackColor;
@@ -286,12 +286,12 @@ namespace VAR
             dgvVariations.Columns.Clear();
             dgvVariations.AutoGenerateColumns = false;
 
-            // Add columns
+            // Add columns with FillWeight to control proportions
             dgvVariations.Columns.Add(new DataGridViewTextBoxColumn
             {
                 DataPropertyName = "VariationNumber",
                 HeaderText = "Variation #",
-                Width = 81,
+                FillWeight = 81,
                 ReadOnly = true
             });
 
@@ -299,7 +299,7 @@ namespace VAR
             {
                 DataPropertyName = "VariationName",
                 HeaderText = "Name",
-                Width = 351,
+                FillWeight = 351,
                 ReadOnly = true
             });
 
@@ -307,7 +307,7 @@ namespace VAR
             {
                 DataPropertyName = "VariationDate",
                 HeaderText = "Date",
-                Width = 81,
+                FillWeight = 81,
                 ReadOnly = true
             });
 
@@ -315,7 +315,7 @@ namespace VAR
             {
                 DataPropertyName = "VariationType",
                 HeaderText = "Type",
-                Width = 72,
+                FillWeight = 72,
                 ReadOnly = true
             });
 
@@ -323,7 +323,7 @@ namespace VAR
             {
                 DataPropertyName = "TotalValue",
                 HeaderText = "Total Value",
-                Width = 90,
+                FillWeight = 90,
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "C2" },
                 ReadOnly = true
             });
@@ -332,7 +332,7 @@ namespace VAR
             {
                 DataPropertyName = "ApprovedBy",
                 HeaderText = "Approved By",
-                Width = 108,
+                FillWeight = 108,
                 ReadOnly = false,
                 Name = "ApprovedBy"
             });
@@ -341,7 +341,7 @@ namespace VAR
             {
                 DataPropertyName = "PurchaseOrder",
                 HeaderText = "Purchase Order",
-                Width = 108,
+                FillWeight = 108,
                 ReadOnly = false,
                 Name = "PurchaseOrder"
             });
@@ -350,7 +350,7 @@ namespace VAR
             {
                 DataPropertyName = "JobNumber",
                 HeaderText = "Job Number",
-                Width = 108,
+                FillWeight = 108,
                 ReadOnly = false,
                 Name = "JobNumber"
             });
@@ -359,7 +359,7 @@ namespace VAR
             {
                 DataPropertyName = "ApprovedDate",
                 HeaderText = "Approved Date",
-                Width = 117,
+                FillWeight = 117,
                 ReadOnly = true,
                 Name = "ApprovedDate"
             });
@@ -370,7 +370,7 @@ namespace VAR
                 HeaderText = "Print",
                 Text = "📄",
                 UseColumnTextForButtonValue = true,
-                Width = 54,
+                FillWeight = 54,
                 Name = "PrintButton"
             };
             dgvVariations.Columns.Add(printButtonColumn);
@@ -381,7 +381,7 @@ namespace VAR
                 HeaderText = "Action",
                 Text = "Approve",
                 UseColumnTextForButtonValue = false,
-                Width = 90,
+                FillWeight = 90,
                 Name = "ActionButton",
                 FlatStyle = FlatStyle.Standard
             };
