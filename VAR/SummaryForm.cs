@@ -91,6 +91,8 @@ namespace VAR
             dgvVariations.DefaultCellStyle.SelectionBackColor = dgvVariations.DefaultCellStyle.BackColor;
             dgvVariations.DefaultCellStyle.SelectionForeColor = dgvVariations.DefaultCellStyle.ForeColor;
             dgvVariations.CellContentClick += DgvVariations_CellContentClick;
+            dgvVariations.CellValueChanged += DgvVariations_CellValueChanged;
+            dgvVariations.CurrentCellDirtyStateChanged += DgvVariations_CurrentCellDirtyStateChanged;
             dgvVariations.CellDoubleClick += DgvVariations_CellDoubleClick;
             dgvVariations.CellEndEdit += DgvVariations_CellEndEdit;
             dgvVariations.RowPrePaint += DgvVariations_RowPrePaint;
@@ -178,7 +180,7 @@ namespace VAR
             grpAllVariations = new GroupBox
             {
                 Location = new Point(20, 470),
-                Size = new Size((this.ClientSize.Width - 60) / 2, 150),
+                Size = new Size(this.ClientSize.Width - 40, 150),
                 Text = "All Variations Summary",
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
@@ -210,11 +212,11 @@ namespace VAR
 
             grpApprovedVariations = new GroupBox
             {
-                Location = new Point((this.ClientSize.Width / 2) + 10, 470),
+                Location = new Point(20, 630),
                 Size = new Size((this.ClientSize.Width - 60) / 2, 150),
                 Text = "Approved Variations Summary",
                 BackColor = Color.FromArgb(230, 255, 230),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
 
             lblApprovedAdditions = new Label
@@ -245,11 +247,11 @@ namespace VAR
             // Voided Variations Summary GroupBox
             grpVoidedVariations = new GroupBox
             {
-                Location = new Point(20, 630),
-                Size = new Size(this.ClientSize.Width - 40, 150),
+                Location = new Point((this.ClientSize.Width / 2) + 10, 630),
+                Size = new Size((this.ClientSize.Width - 60) / 2, 150),
                 Text = "Voided Variations Summary",
                 BackColor = Color.FromArgb(255, 230, 230),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
 
             lblVoidedAdditions = new Label
@@ -310,18 +312,18 @@ namespace VAR
             // Adjust group box widths
             if (grpAllVariations != null)
             {
-                grpAllVariations.Width = (this.ClientSize.Width - 60) / 2;
+                grpAllVariations.Width = this.ClientSize.Width - 40;
             }
 
             if (grpApprovedVariations != null)
             {
                 grpApprovedVariations.Width = (this.ClientSize.Width - 60) / 2;
-                grpApprovedVariations.Left = (this.ClientSize.Width / 2) + 10;
             }
 
             if (grpVoidedVariations != null)
             {
-                grpVoidedVariations.Width = this.ClientSize.Width - 40;
+                grpVoidedVariations.Width = (this.ClientSize.Width - 60) / 2;
+                grpVoidedVariations.Left = (this.ClientSize.Width / 2) + 10;
             }
         }
 
@@ -586,63 +588,74 @@ namespace VAR
                 PrintVariation(variation.Id);
                 return;
             }
+        }
 
-            // Handle Action ComboBox selection
-            if (columnName == "ActionCombo")
+        private void DgvVariations_CurrentCellDirtyStateChanged(object? sender, EventArgs e)
+        {
+            if (dgvVariations.IsCurrentCellDirty && dgvVariations.CurrentCell.OwningColumn.Name == "ActionCombo")
             {
-                _selectedRowIndex = e.RowIndex;
+                dgvVariations.CommitEdit(DataGridViewDataErrorContexts.Commit);
+            }
+        }
 
-                var selectedValue = dgvVariations.Rows[e.RowIndex].Cells["ActionCombo"].Value?.ToString();
+        private void DgvVariations_CellValueChanged(object? sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0) return;
 
-                if (selectedValue == "Approve")
+            string? columnName = dgvVariations.Columns[e.ColumnIndex].Name;
+
+            // Only handle ActionCombo changes
+            if (columnName != "ActionCombo") return;
+
+            var variation = _dbHelper.GetAllVariations()[e.RowIndex];
+            var selectedValue = dgvVariations.Rows[e.RowIndex].Cells["ActionCombo"].Value?.ToString();
+
+            if (selectedValue == "Approve")
+            {
+                var approvalForm = new ApprovalForm();
+                if (approvalForm.ShowDialog() == DialogResult.OK)
                 {
-                    var approvalForm = new ApprovalForm();
-                    if (approvalForm.ShowDialog() == DialogResult.OK)
-                    {
-                        _dbHelper.ApproveVariation(variation.Id, approvalForm.ApprovedBy);
-                        LoadData();
-                    }
-                    else
-                    {
-                        // User cancelled, reset the combo box
-                        LoadData();
-                    }
+                    _dbHelper.ApproveVariation(variation.Id, approvalForm.ApprovedBy);
+                    LoadData();
                 }
-                else if (selectedValue == "Void")
+                else
                 {
-                    var voidForm = new VoidReasonForm();
-                    if (voidForm.ShowDialog() == DialogResult.OK)
-                    {
-                        _dbHelper.VoidVariation(variation.Id, voidForm.VoidReason);
-                        LoadData();
-                    }
-                    else
-                    {
-                        // User cancelled, reset the combo box
-                        LoadData();
-                    }
+                    // User cancelled, reset the combo box
+                    LoadData();
                 }
-                else if (selectedValue == "Unapprove/Unvoid")
+            }
+            else if (selectedValue == "Void")
+            {
+                var voidForm = new VoidReasonForm();
+                if (voidForm.ShowDialog() == DialogResult.OK)
                 {
-                    var result = MessageBox.Show(
-                        "Are you sure you want to unapprove/unvoid this variation?",
-                        "Unapprove/Unvoid Variation",
-                        MessageBoxButtons.YesNo,
-                        MessageBoxIcon.Question);
-
-                    if (result == DialogResult.Yes)
-                    {
-                        _dbHelper.UnapproveVariation(variation.Id);
-                        LoadData();
-                    }
-                    else
-                    {
-                        // User cancelled, reset the combo box
-                        LoadData();
-                    }
+                    _dbHelper.VoidVariation(variation.Id, voidForm.VoidReason);
+                    LoadData();
                 }
+                else
+                {
+                    // User cancelled, reset the combo box
+                    LoadData();
+                }
+            }
+            else if (selectedValue == "Unapprove/Unvoid")
+            {
+                var result = MessageBox.Show(
+                    "Are you sure you want to unapprove/unvoid this variation?",
+                    "Unapprove/Unvoid Variation",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question);
 
-                return;
+                if (result == DialogResult.Yes)
+                {
+                    _dbHelper.UnapproveVariation(variation.Id);
+                    LoadData();
+                }
+                else
+                {
+                    // User cancelled, reset the combo box
+                    LoadData();
+                }
             }
         }
 
