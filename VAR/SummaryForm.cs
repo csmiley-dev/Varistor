@@ -454,8 +454,6 @@ namespace VAR
             lblVoidedCredits.Text = $"Voided Credits: {summary.VoidedCredits:C2}";
             lblVoidedNetValue.Text = $"Voided Net Value: {summary.VoidedNetValue:C2}";
 
-            _isLoadingData = false;
-
             // Update ComboBox values and cell readonly status based on variation state
             for (int i = 0; i < dgvVariations.Rows.Count; i++)
             {
@@ -509,6 +507,8 @@ namespace VAR
                 dgvVariations.Rows[_selectedRowIndex].Selected = true;
                 dgvVariations.FirstDisplayedScrollingRowIndex = _selectedRowIndex;
             }
+
+            _isLoadingData = false;
         }
 
         private void DgvVariations_RowPrePaint(object? sender, DataGridViewRowPrePaintEventArgs e)
