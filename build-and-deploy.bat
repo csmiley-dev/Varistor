@@ -55,6 +55,12 @@ if errorlevel 1 (
 echo              Done.
 
 echo.
+echo [Step 5b] Ensuring default config files exist on X:\BMS\Programs\PDC\ ...
+if not exist "X:\BMS\Programs\PDC\clients.json" copy "PDC\config-templates\clients.json" "X:\BMS\Programs\PDC\clients.json" >nul
+if not exist "X:\BMS\Programs\PDC\hourly-rates.json" copy "PDC\config-templates\hourly-rates.json" "X:\BMS\Programs\PDC\hourly-rates.json" >nul
+echo              Done. (existing files, if any, were left untouched)
+
+echo.
 echo [Step 6/6] Copying Varistor to X:\BMS\Programs\VAR\ ...
 xcopy "VAR\bin\Release\net8.0-windows\win-x64\publish\*.*" "X:\BMS\Programs\VAR\" /Y /E /I /Q
 if errorlevel 1 (

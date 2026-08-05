@@ -2,17 +2,35 @@ using System;
 using System.Collections.Generic;
 using System.Data.SQLite;
 using System.IO;
+using System.Text.Json;
 
 namespace PDC
 {
+    public class ClientConfig
+    {
+        public string Name { get; set; } = "";
+        public List<string> Contacts { get; set; } = new();
+    }
+
+    public class HourlyRateConfig
+    {
+        public string Name { get; set; } = "";
+        public double Value { get; set; }
+    }
+
     public class DatabaseHelper
     {
+        private static readonly JsonSerializerOptions ConfigJsonOptions = new()
+        {
+            PropertyNameCaseInsensitive = true
+        };
+
         public static void CreateClientsDatabase(string dbPath)
         {
-            if (File.Exists(dbPath))
-                return;
-
-            SQLiteConnection.CreateFile(dbPath);
+            if (!File.Exists(dbPath))
+            {
+                SQLiteConnection.CreateFile(dbPath);
+            }
 
             using var connection = new SQLiteConnection($"Data Source={dbPath};Version=3;");
             connection.Open();
@@ -41,52 +59,62 @@ namespace PDC
                 command.ExecuteNonQuery();
             }
 
-            // Seed with some default clients
-            SeedDefaultClients(connection);
+            // Add any clients/contacts from clients.json that aren't in the database yet.
+            // Never removes or overwrites existing rows, so it's safe to run on every launch.
+            string configPath = Path.Combine(Path.GetDirectoryName(dbPath) ?? "", "clients.json");
+            SyncClientsFromConfig(connection, configPath);
         }
 
-        private static void SeedDefaultClients(SQLiteConnection connection)
+        private static void SyncClientsFromConfig(SQLiteConnection connection, string configPath)
         {
-            var defaultClients = new Dictionary<string, List<string>>
-            {
-                { "Corbritt Air Conditioning", new List<string> { "Dale Moxon", "John Carmichael", "Jai Capsalis" } },
-                { "Specific Refrigeration Services", new List<string> { "Will McTaggart", "Alan Patterson", "Dale Pennington", "Steven Bennet" } },
-                { "Contract Air Conditioning", new List<string> { "Mick Eade", "Craig Townsend", "Jess Cole" } },
-                { "Jamair", new List<string> { "Bob Johnson", "Alice Williams" } },
-                { "Entire Mechanical Services", new List<string> { "Mitch Coen", "Brenton Roberts", "Josh Cunningham", "Arjit Bharti", "Phil Quick", "Joshua Lawson", "Jake Camilleri" } },
-                { "A.G. Coombs", new List<string> { "Michael Roberts", "Simon Frangiacomo", "Leigh McInneny" } },
-                { "Air Systems Engineering", new List<string> { "Bob Johnson", "Alice Williams" } },
-                { "Airmaster Australia", new List<string> { "Brendan Mann", "John Allan", "Ian Walker", "Clinton Richards", "Matt Allan", "Deviah Kalianda" } },
-                { "Apex Air", new List<string> { "Azz Fitzpatrick", "Justin Fitzpatrick" } },
-                { "Clydesdale Bros.", new List<string> { "Cameron Clydesdale", "Arlene Clydesdale" } },
-                { "Ellis Air Conditioning", new List<string> { "John Lalor", "Cameron Crowley", "Aljo Taffard-Phillips", "Gavin Webster", "Michael Demetriou", "Gary Ritchens" } },
-                { "Grosvenor Engineering Group", new List<string> { "Tristan Reichelt", "Daniel Johnstone", "Alan Cook" } },
-                { "Mechonik", new List<string> { "Nick Meade", "Tom Hrelja", "Victoria Totten", "James Lloyd" } },
-                { "O.P. Industries", new List<string> { "Jeremy Whitney", "Keith Pearson", "Darren McGrath", "Mark Wright", "Brendan Dozzi" } },
-                { "RACE Services", new List<string> { "Scott Ellis", "Hung Thai" } },
-                { "Quadrant Mechanical Services", new List<string> { "Aaron Mogg", "Darren Weymouth", "Ben Smith", "Tony Lee" } },
-                { "Auscool", new List<string> { "Andy Hume", "Ujjal Ghosh" } },
-                { "Fredon Mechanical Services", new List<string> { "James Torcasio", "Aaron Smith", "Adam McArdle", "Pierce Holstrom" } },
-                { "d&e Air Conditioning", new List<string> { "Prem Dcruz", "Nilesh Raj" } }
-            };
+            if (!File.Exists(configPath))
+                return;
 
-            foreach (var client in defaultClients)
+            List<ClientConfig>? clients;
+            try
             {
+                string json = File.ReadAllText(configPath);
+                clients = JsonSerializer.Deserialize<List<ClientConfig>>(json, ConfigJsonOptions);
+            }
+            catch
+            {
+                // Malformed JSON shouldn't block the app from starting with whatever is already in the database.
+                return;
+            }
+
+            if (clients == null)
+                return;
+
+            foreach (var client in clients)
+            {
+                if (string.IsNullOrWhiteSpace(client.Name))
+                    continue;
+
                 string insertClient = "INSERT OR IGNORE INTO Clients (ClientName) VALUES (@clientName)";
                 using (var command = new SQLiteCommand(insertClient, connection))
                 {
-                    command.Parameters.AddWithValue("@clientName", client.Key);
+                    command.Parameters.AddWithValue("@clientName", client.Name);
                     command.ExecuteNonQuery();
                 }
 
-                foreach (var contact in client.Value)
+                foreach (var contact in client.Contacts)
                 {
-                    string insertContact = "INSERT INTO ClientContacts (ClientName, ContactName) VALUES (@clientName, @contactName)";
-                    using (var command = new SQLiteCommand(insertContact, connection))
+                    if (string.IsNullOrWhiteSpace(contact))
+                        continue;
+
+                    string checkExists = "SELECT COUNT(*) FROM ClientContacts WHERE ClientName = @clientName AND ContactName = @contactName";
+                    using var checkCommand = new SQLiteCommand(checkExists, connection);
+                    checkCommand.Parameters.AddWithValue("@clientName", client.Name);
+                    checkCommand.Parameters.AddWithValue("@contactName", contact);
+                    bool exists = Convert.ToInt32(checkCommand.ExecuteScalar()) > 0;
+
+                    if (!exists)
                     {
-                        command.Parameters.AddWithValue("@clientName", client.Key);
-                        command.Parameters.AddWithValue("@contactName", contact);
-                        command.ExecuteNonQuery();
+                        string insertContact = "INSERT INTO ClientContacts (ClientName, ContactName) VALUES (@clientName, @contactName)";
+                        using var insertCommand = new SQLiteCommand(insertContact, connection);
+                        insertCommand.Parameters.AddWithValue("@clientName", client.Name);
+                        insertCommand.Parameters.AddWithValue("@contactName", contact);
+                        insertCommand.ExecuteNonQuery();
                     }
                 }
             }
@@ -137,7 +165,7 @@ namespace PDC
             return contacts;
         }
 
-        public static void CreateProjectDatabase(string dbPath, string projectName, string projectNumber, string clientName)
+        public static void CreateProjectDatabase(string dbPath, string projectName, string projectNumber, string clientName, string configFolder)
         {
             if (File.Exists(dbPath))
                 File.Delete(dbPath);
@@ -226,24 +254,45 @@ namespace PDC
                 command.ExecuteNonQuery();
             }
 
-            // Seed default hourly rates
-            SeedHourlyRates(connection);
+            // Seed default hourly rates for this project from hourly-rates.json
+            SeedHourlyRates(connection, configFolder);
         }
 
-        private static void SeedHourlyRates(SQLiteConnection connection)
+        private static void SeedHourlyRates(SQLiteConnection connection, string configFolder)
         {
-            var defaultRates = new Dictionary<string, double>
+            List<HourlyRateConfig>? rates = null;
+            string configPath = Path.Combine(configFolder ?? "", "hourly-rates.json");
+
+            if (File.Exists(configPath))
             {
-                { "Standard", 100.0 },
-                { "Senior", 150.0 },
-                { "Specialist", 200.0 }
+                try
+                {
+                    string json = File.ReadAllText(configPath);
+                    rates = JsonSerializer.Deserialize<List<HourlyRateConfig>>(json, ConfigJsonOptions);
+                }
+                catch
+                {
+                    rates = null;
+                }
+            }
+
+            // Fall back to built-in defaults if hourly-rates.json is missing or invalid,
+            // so a new project always gets usable rate options.
+            rates ??= new List<HourlyRateConfig>
+            {
+                new() { Name = "Standard", Value = 100.0 },
+                new() { Name = "Senior", Value = 150.0 },
+                new() { Name = "Specialist", Value = 200.0 }
             };
 
-            foreach (var rate in defaultRates)
+            foreach (var rate in rates)
             {
+                if (string.IsNullOrWhiteSpace(rate.Name))
+                    continue;
+
                 string insertRate = "INSERT INTO HourlyRates (RateName, RateValue) VALUES (@name, @value)";
                 using var command = new SQLiteCommand(insertRate, connection);
-                command.Parameters.AddWithValue("@name", rate.Key);
+                command.Parameters.AddWithValue("@name", rate.Name);
                 command.Parameters.AddWithValue("@value", rate.Value);
                 command.ExecuteNonQuery();
             }

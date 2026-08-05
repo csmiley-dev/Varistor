@@ -36,6 +36,14 @@ namespace PDC
             this.MaximizeBox = false;
             this.StartPosition = FormStartPosition.CenterScreen;
 
+            // WinForms doesn't pick up ApplicationIcon for the running window/taskbar icon
+            // on its own (only for the exe's file/Explorer icon) - it must be set explicitly.
+            try
+            {
+                this.Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
+            }
+            catch { /* fall back to the default WinForms icon if extraction fails */ }
+
             int labelWidth = 120;
             int controlWidth = 300;
             int leftMargin = 30;
@@ -298,7 +306,7 @@ namespace PDC
 
             // Create and seed project database
             string projectDbPath = Path.Combine(variationsFolder, "project.db");
-            DatabaseHelper.CreateProjectDatabase(projectDbPath, projectName, projectNumber, clientName);
+            DatabaseHelper.CreateProjectDatabase(projectDbPath, projectName, projectNumber, clientName, zzFolderPath);
 
             // Copy client contacts to project database
             CopyClientContacts(clientName, projectDbPath);

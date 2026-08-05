@@ -6,6 +6,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>disable</Nullable>
     <AssemblyName>PDC</AssemblyName>
+    <ApplicationIcon>..\LJS.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>

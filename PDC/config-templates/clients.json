@@ -1,0 +1,21 @@
+[
+  { "name": "Corbritt Air Conditioning", "contacts": ["Dale Moxon", "John Carmichael", "Jai Capsalis"] },
+  { "name": "Specific Refrigeration Services", "contacts": ["Will McTaggart", "Alan Patterson", "Dale Pennington", "Steven Bennet"] },
+  { "name": "Contract Air Conditioning", "contacts": ["Mick Eade", "Craig Townsend", "Jess Cole"] },
+  { "name": "Jamair", "contacts": ["Bob Johnson", "Alice Williams"] },
+  { "name": "Entire Mechanical Services", "contacts": ["Mitch Coen", "Brenton Roberts", "Josh Cunningham", "Arjit Bharti", "Phil Quick", "Joshua Lawson", "Jake Camilleri"] },
+  { "name": "A.G. Coombs", "contacts": ["Michael Roberts", "Simon Frangiacomo", "Leigh McInneny"] },
+  { "name": "Air Systems Engineering", "contacts": ["Bob Johnson", "Alice Williams"] },
+  { "name": "Airmaster Australia", "contacts": ["Brendan Mann", "John Allan", "Ian Walker", "Clinton Richards", "Matt Allan", "Deviah Kalianda"] },
+  { "name": "Apex Air", "contacts": ["Azz Fitzpatrick", "Justin Fitzpatrick"] },
+  { "name": "Clydesdale Bros.", "contacts": ["Cameron Clydesdale", "Arlene Clydesdale"] },
+  { "name": "Ellis Air Conditioning", "contacts": ["John Lalor", "Cameron Crowley", "Aljo Taffard-Phillips", "Gavin Webster", "Michael Demetriou", "Gary Ritchens"] },
+  { "name": "Grosvenor Engineering Group", "contacts": ["Tristan Reichelt", "Daniel Johnstone", "Alan Cook"] },
+  { "name": "Mechonik", "contacts": ["Nick Meade", "Tom Hrelja", "Victoria Totten", "James Lloyd"] },
+  { "name": "O.P. Industries", "contacts": ["Jeremy Whitney", "Keith Pearson", "Darren McGrath", "Mark Wright", "Brendan Dozzi"] },
+  { "name": "RACE Services", "contacts": ["Scott Ellis", "Hung Thai"] },
+  { "name": "Quadrant Mechanical Services", "contacts": ["Aaron Mogg", "Darren Weymouth", "Ben Smith", "Tony Lee"] },
+  { "name": "Auscool", "contacts": ["Andy Hume", "Ujjal Ghosh"] },
+  { "name": "Fredon Mechanical Services", "contacts": ["James Torcasio", "Aaron Smith", "Adam McArdle", "Pierce Holstrom"] },
+  { "name": "d&e Air Conditioning", "contacts": ["Prem Dcruz", "Nilesh Raj"] }
+]

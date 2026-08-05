@@ -1,5 +1,7 @@
 using System;
 using System.Drawing;
+using System.Linq;
+using System.Reflection;
 using System.Windows.Forms;
 
 namespace VAR
@@ -12,6 +14,7 @@ namespace VAR
 
         private Label lblProjectInfo;
         private Label lblDate;
+        private Label lblVersion;
         private DataGridView dgvVariations;
         private GroupBox grpAllVariations;
         private GroupBox grpApprovedVariations;
@@ -35,6 +38,17 @@ namespace VAR
         private Button btnPrintSummary;
         private int _selectedRowIndex = -1;
 
+        // Buttons row + the three summary boxes are pinned to the bottom of the window; the
+        // grid fills whatever vertical space is left above them (with a floor so it never
+        // collapses to nothing - the grid's own scrollbar takes over past that point).
+        private const int ButtonRowHeight = 35;
+        private const int SummaryBoxHeight = 150;
+        private const int GapGridToButtons = 10;
+        private const int GapButtonsToSummary = 15;
+        private const int GapAllToApprovedVoided = 10;
+        private const int BottomMargin = 20;
+        private const int MinGridHeight = 150;
+
         public SummaryForm()
         {
             // Use current working directory so shortcuts work correctly
@@ -53,6 +67,14 @@ namespace VAR
             this.StartPosition = FormStartPosition.CenterScreen;
             this.WindowState = FormWindowState.Maximized;
             this.BackColor = Color.FromArgb(240, 240, 245);
+
+            // WinForms doesn't pick up ApplicationIcon for the running window/taskbar icon
+            // on its own (only for the exe's file/Explorer icon) - it must be set explicitly.
+            try
+            {
+                this.Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
+            }
+            catch { /* fall back to the default WinForms icon if extraction fails */ }
             this.Shown += SummaryForm_Shown;
             this.Resize += SummaryForm_Resize;
 
@@ -76,10 +98,21 @@ namespace VAR
                 Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
 
+            lblVersion = new Label
+            {
+                Location = new Point(850, 48),
+                Size = new Size(300, 20),
+                Font = new Font("Arial", 8),
+                ForeColor = Color.Gray,
+                Text = GetVersionText(),
+                TextAlign = ContentAlignment.MiddleRight,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+
             // DataGridView for variations
             dgvVariations = new DataGridView
             {
-                Location = new Point(20, 60),
+                Location = new Point(20, 70),
                 Size = new Size(this.ClientSize.Width - 40, 350),
                 AllowUserToAddRows = false,
                 AllowUserToDeleteRows = false,
@@ -285,6 +318,7 @@ namespace VAR
 
             this.Controls.Add(lblProjectInfo);
             this.Controls.Add(lblDate);
+            this.Controls.Add(lblVersion);
             this.Controls.Add(dgvVariations);
             this.Controls.Add(btnNewVariation);
             this.Controls.Add(btnEditVariation);
@@ -299,10 +333,19 @@ namespace VAR
             this.Controls.Add(grpVoidedVariations);
         }
 
+        private static string GetVersionText()
+        {
+            // VAR.csproj's ComputeVersionFromGit target sets Version to "1.<commit count>",
+            // so this reads as a normal, auto-incrementing version number.
+            var version = Assembly.GetExecutingAssembly().GetName().Version;
+            return version == null ? "Version unknown" : $"Version {version.Major}.{version.Minor}";
+        }
+
         private void SummaryForm_Shown(object? sender, EventArgs e)
         {
             // Reload data when form is shown to ensure button text is visible
             LoadData();
+            ApplySummaryLayout();
         }
 
         private void SummaryForm_Resize(object? sender, EventArgs e)
@@ -311,6 +354,11 @@ namespace VAR
             if (lblDate != null)
             {
                 lblDate.Left = this.ClientSize.Width - lblDate.Width - 20;
+            }
+
+            if (lblVersion != null)
+            {
+                lblVersion.Left = this.ClientSize.Width - lblVersion.Width - 20;
             }
 
             // Adjust group box widths
@@ -329,6 +377,39 @@ namespace VAR
                 grpVoidedVariations.Width = (this.ClientSize.Width - 60) / 2;
                 grpVoidedVariations.Left = (this.ClientSize.Width / 2) + 10;
             }
+
+            ApplySummaryLayout();
+        }
+
+        private void ApplySummaryLayout()
+        {
+            if (dgvVariations == null || grpAllVariations == null || grpApprovedVariations == null || grpVoidedVariations == null)
+                return;
+
+            int reservedBelowGrid = GapGridToButtons + ButtonRowHeight + GapButtonsToSummary
+                + SummaryBoxHeight + GapAllToApprovedVoided + SummaryBoxHeight + BottomMargin;
+
+            int availableGridHeight = this.ClientSize.Height - dgvVariations.Top - reservedBelowGrid;
+            dgvVariations.Height = Math.Max(MinGridHeight, availableGridHeight);
+
+            int gridBottom = dgvVariations.Top + dgvVariations.Height;
+
+            int buttonsTop = gridBottom + GapGridToButtons;
+            btnNewVariation.Top = buttonsTop;
+            btnEditVariation.Top = buttonsTop;
+            btnDeleteVariation.Top = buttonsTop;
+            btnDuplicateVariation.Top = buttonsTop;
+            btnMoveUp.Top = buttonsTop;
+            btnMoveDown.Top = buttonsTop;
+            btnRefresh.Top = buttonsTop;
+            btnPrintSummary.Top = buttonsTop;
+
+            int allVariationsTop = buttonsTop + ButtonRowHeight + GapButtonsToSummary;
+            grpAllVariations.Top = allVariationsTop;
+
+            int approvedVoidedTop = allVariationsTop + SummaryBoxHeight + GapAllToApprovedVoided;
+            grpApprovedVariations.Top = approvedVoidedTop;
+            grpVoidedVariations.Top = approvedVoidedTop;
         }
 
         private void LoadData()

@@ -33,6 +33,17 @@ namespace VAR
         private Timer saveStatusTimer;
         private string _originalDataHash = "";
 
+        // Vertical offsets of the controls below the grid, measured from the grid's bottom edge.
+        // Used to reflow them when the grid grows/shrinks on window resize.
+        private const int GridBottomOffsetMoveButtons = 10;
+        private const int GridBottomOffsetMaterialSubtotal = 50;
+        private const int GridBottomOffsetLabourSubtotal = 75;
+        private const int GridBottomOffsetGrandTotal = 100;
+        private const int GridBottomOffsetSaveStatus = 60;
+        private const int GridBottomOffsetActionButtons = 90;
+        private const int ReservedHeightBelowGrid = 145;
+        private const int MinGridHeight = 200;
+
         public VariationEditorForm(DatabaseHelper dbHelper, int? variationId = null)
         {
             _dbHelper = dbHelper;
@@ -58,6 +69,15 @@ namespace VAR
                 {
                     _lineItems.Add(new LineItem { ItemNumber = i, ItemType = "Cost" });
                 }
+
+                // Pre-fill the first row as an Administration line, if that rate still exists
+                var adminRate = _hourlyRates.FirstOrDefault(r => string.Equals(r.RateName, "Administration", StringComparison.OrdinalIgnoreCase));
+                if (adminRate != null)
+                {
+                    _lineItems[0].ItemDescription = "Administration";
+                    _lineItems[0].HourlyQty = 1;
+                    _lineItems[0].HourlyRate = adminRate.RateValue;
+                }
             }
 
             InitializeComponent();
@@ -67,11 +87,18 @@ namespace VAR
         private void InitializeComponent()
         {
             this.Text = _variationId.HasValue ? "Edit Variation" : "New Variation";
-            this.Size = new Size(1400, 800);
+            this.Size = new Size(1540, 880);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.FormClosing += VariationEditorForm_FormClosing;
             this.KeyPreview = true;
             this.KeyDown += VariationEditorForm_KeyDown;
+            this.Resize += (s, e) => ApplyGridSizeAndLayout();
+
+            try
+            {
+                this.Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
+            }
+            catch { /* fall back to the default WinForms icon if extraction fails */ }
             this.BackColor = Color.FromArgb(240, 240, 245);
 
             int leftMargin = 20;
@@ -164,15 +191,17 @@ namespace VAR
                 AllowUserToAddRows = false,
                 AllowUserToDeleteRows = false,
                 SelectionMode = DataGridViewSelectionMode.CellSelect,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
                 AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells,
-                DefaultCellStyle = new DataGridViewCellStyle { WrapMode = DataGridViewTriState.True }
+                DefaultCellStyle = new DataGridViewCellStyle { WrapMode = DataGridViewTriState.True },
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
             dgvLineItems.CellValueChanged += DgvLineItems_CellValueChanged;
             dgvLineItems.CurrentCellDirtyStateChanged += DgvLineItems_CurrentCellDirtyStateChanged;
             dgvLineItems.CellPainting += DgvLineItems_CellPainting;
             dgvLineItems.CellClick += DgvLineItems_CellClick;
             dgvLineItems.EditingControlShowing += DgvLineItems_EditingControlShowing;
+            dgvLineItems.CellFormatting += DgvLineItems_CellFormatting;
 
             // Add Row Button
             btnAddRow = new Button
@@ -317,6 +346,29 @@ namespace VAR
             this.Controls.Add(btnClose);
             this.Controls.Add(btnPrint);
             this.Controls.Add(lblSaveStatus);
+
+            ApplyGridSizeAndLayout();
+        }
+
+        private void ApplyGridSizeAndLayout()
+        {
+            int availableHeight = this.ClientSize.Height - dgvLineItems.Top - ReservedHeightBelowGrid;
+            dgvLineItems.Height = Math.Max(MinGridHeight, availableHeight);
+
+            int gridBottom = dgvLineItems.Top + dgvLineItems.Height;
+
+            btnAddRow.Top = gridBottom + GridBottomOffsetMoveButtons;
+            btnMoveUp.Top = gridBottom + GridBottomOffsetMoveButtons;
+            btnMoveDown.Top = gridBottom + GridBottomOffsetMoveButtons;
+
+            lblMaterialSubtotal.Top = gridBottom + GridBottomOffsetMaterialSubtotal;
+            lblLabourSubtotal.Top = gridBottom + GridBottomOffsetLabourSubtotal;
+            lblGrandTotal.Top = gridBottom + GridBottomOffsetGrandTotal;
+
+            lblSaveStatus.Top = gridBottom + GridBottomOffsetSaveStatus;
+            btnSave.Top = gridBottom + GridBottomOffsetActionButtons;
+            btnClose.Top = gridBottom + GridBottomOffsetActionButtons;
+            btnPrint.Top = gridBottom + GridBottomOffsetActionButtons;
         }
 
         private void LoadData()
@@ -341,7 +393,7 @@ namespace VAR
             {
                 Name = "ItemNumber",
                 HeaderText = "Item #",
-                Width = 60,
+                FillWeight = 60,
                 ReadOnly = true
             });
 
@@ -349,7 +401,7 @@ namespace VAR
             {
                 Name = "ItemDescription",
                 HeaderText = "Description",
-                Width = 350,
+                FillWeight = 350,
                 DefaultCellStyle = new DataGridViewCellStyle { WrapMode = DataGridViewTriState.True }
             });
 
@@ -357,7 +409,7 @@ namespace VAR
             {
                 Name = "ItemType",
                 HeaderText = "Type",
-                Width = 90,
+                FillWeight = 90,
                 DataSource = new[] { "Cost", "Refund" },
                 DefaultCellStyle = new DataGridViewCellStyle { BackColor = Color.FromArgb(230, 240, 255) }
             };
@@ -367,21 +419,21 @@ namespace VAR
             {
                 Name = "MaterialQty",
                 HeaderText = "Mat. Qty",
-                Width = 80
+                FillWeight = 80
             });
 
             dgvLineItems.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "MaterialCost",
                 HeaderText = "Mat. Cost",
-                Width = 100
+                FillWeight = 100
             });
 
             dgvLineItems.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "MaterialTotal",
                 HeaderText = "Mat. Total",
-                Width = 110,
+                FillWeight = 110,
                 ReadOnly = true,
                 DefaultCellStyle = new DataGridViewCellStyle { BackColor = Color.FromArgb(240, 255, 240), Format = "C2" }
             });
@@ -390,7 +442,7 @@ namespace VAR
             {
                 Name = "HourlyQty",
                 HeaderText = "Hours",
-                Width = 80
+                FillWeight = 80
             });
 
             // Create hourly rate dropdown with rates and custom option
@@ -400,9 +452,17 @@ namespace VAR
             {
                 Name = "HourlyRate",
                 HeaderText = "Hourly Rate",
-                Width = 150,
+                FillWeight = 158,
                 DataSource = rateOptions.ToArray(),
-                DefaultCellStyle = new DataGridViewCellStyle { BackColor = Color.FromArgb(255, 250, 230) }
+                DefaultCellStyle = new DataGridViewCellStyle
+                {
+                    BackColor = Color.FromArgb(255, 250, 230),
+                    Alignment = DataGridViewContentAlignment.MiddleRight,
+                    // Grid-level WrapMode=True (needed for Description) would otherwise be
+                    // inherited here, growing the row to fit the raw untruncated text - the
+                    // CellFormatting ellipsis logic below doesn't factor into row auto-sizing.
+                    WrapMode = DataGridViewTriState.False
+                }
             };
             dgvLineItems.Columns.Add(hourlyRateColumn);
 
@@ -410,14 +470,14 @@ namespace VAR
             {
                 Name = "CustomRate",
                 HeaderText = "Custom Rate",
-                Width = 110
+                FillWeight = 110
             });
 
             dgvLineItems.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "LabourTotal",
                 HeaderText = "Labour Total",
-                Width = 120,
+                FillWeight = 120,
                 ReadOnly = true,
                 DefaultCellStyle = new DataGridViewCellStyle { BackColor = Color.FromArgb(240, 248, 255), Format = "C2" }
             });
@@ -426,7 +486,7 @@ namespace VAR
             {
                 Name = "LineTotal",
                 HeaderText = "Line Total",
-                Width = 120,
+                FillWeight = 120,
                 ReadOnly = true,
                 DefaultCellStyle = new DataGridViewCellStyle { BackColor = Color.FromArgb(255, 245, 230), Format = "C2" }
             });
@@ -465,6 +525,7 @@ namespace VAR
                 row.Cells["LineTotal"].Value = item.LineTotal;
             }
 
+            dgvLineItems.AutoResizeRows(DataGridViewAutoSizeRowsMode.AllCells);
             UpdateTotals();
             ComputeDataHash();
         }
@@ -512,6 +573,13 @@ namespace VAR
             if (e.RowIndex < 0) return;
 
             var row = dgvLineItems.Rows[e.RowIndex];
+
+            // Re-wrap and resize the row for the committed description text (covers paste,
+            // programmatic edits, etc. in addition to the live-typing handler)
+            if (e.ColumnIndex == dgvLineItems.Columns["ItemDescription"].Index)
+            {
+                dgvLineItems.AutoResizeRow(e.RowIndex, DataGridViewAutoSizeRowMode.AllCells);
+            }
 
             // Format MaterialCost with dollar sign
             if (e.ColumnIndex == dgvLineItems.Columns["MaterialCost"].Index)
@@ -615,18 +683,73 @@ namespace VAR
             }
         }
 
+        private void DgvLineItems_CellFormatting(object? sender, DataGridViewCellFormattingEventArgs e)
+        {
+            if (e.RowIndex < 0) return;
+            if (dgvLineItems.Columns[e.ColumnIndex].Name != "HourlyRate") return;
+            if (e.Value == null) return;
+
+            string text = e.Value.ToString() ?? "";
+            int markerIndex = text.IndexOf("($", StringComparison.Ordinal);
+            if (markerIndex <= 0) return;
+
+            string suffix = text.Substring(markerIndex); // e.g. "($161.00)"
+            string prefix = text.Substring(0, markerIndex);
+            Font font = e.CellStyle?.Font ?? dgvLineItems.Font;
+
+            // Reserve room for the combo box's dropdown arrow button plus cell padding,
+            // not just the text itself, or borderline-length values overflow past the arrow.
+            // Kept tight since the goal is fitting as much of the prefix as possible.
+            const int comboButtonWidth = 18;
+            const int cellPadding = 4;
+            int availableWidth = dgvLineItems.Columns[e.ColumnIndex].Width - comboButtonWidth - cellPadding;
+
+            if (MeasureTextWidth(text, font) <= availableWidth)
+                return;
+
+            const string ellipsis = "..";
+            int budget = availableWidth - MeasureTextWidth(suffix, font) - MeasureTextWidth(ellipsis, font);
+
+            if (budget <= 0)
+            {
+                e.Value = ellipsis + suffix;
+                e.FormattingApplied = true;
+                return;
+            }
+
+            string truncatedPrefix = prefix;
+            while (truncatedPrefix.Length > 0 && MeasureTextWidth(truncatedPrefix, font) > budget)
+            {
+                truncatedPrefix = truncatedPrefix.Substring(0, truncatedPrefix.Length - 1);
+            }
+
+            e.Value = truncatedPrefix.TrimEnd() + ellipsis + suffix;
+            e.FormattingApplied = true;
+        }
+
+        private static int MeasureTextWidth(string text, Font font)
+        {
+            // TextRenderer.MeasureText's default overload adds internal padding, which left
+            // a visible gap once the text is right-aligned. NoPadding gives a tighter,
+            // more accurate width so more of the prefix text can be kept.
+            // Size.Empty (not a huge proposed size like int.MaxValue) is the documented way
+            // to ask for the text's natural unwrapped width - a large proposed size here was
+            // producing wrong (too-small) measurements for longer rate names, letting them
+            // slip past the "does it fit" check and wrap into a second line instead of
+            // getting truncated.
+            return TextRenderer.MeasureText(text, font, Size.Empty, TextFormatFlags.NoPadding | TextFormatFlags.SingleLine).Width;
+        }
+
         private void DgvLineItems_CellClick(object? sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex < 0 || e.ColumnIndex < 0) return;
 
-            // Immediately open dropdown for combo box columns
+            // Immediately open dropdown for combo box columns. Opening it is handled by
+            // EditingControlShowing (deferred there to avoid a positioning race), so this
+            // just needs to start the edit.
             if (dgvLineItems.Columns[e.ColumnIndex] is DataGridViewComboBoxColumn)
             {
                 dgvLineItems.BeginEdit(true);
-                if (dgvLineItems.EditingControl is ComboBox combo)
-                {
-                    combo.DroppedDown = true;
-                }
             }
 
             // Handle Custom Rate enable/disable
@@ -635,11 +758,37 @@ namespace VAR
 
         private void DgvLineItems_EditingControlShowing(object? sender, DataGridViewEditingControlShowingEventArgs e)
         {
-            // Auto-open dropdown when editing combobox
+            // Auto-open dropdown when editing combobox. The shared editing control isn't
+            // repositioned to the new cell until after this event returns, so opening it
+            // immediately drops it down at the previous cell's stale location. Defer until
+            // the control has been moved and painted at the correct spot.
             if (e.Control is ComboBox combo)
             {
-                combo.DroppedDown = true;
+                combo.BeginInvoke(new Action(() =>
+                {
+                    if (!combo.IsDisposed)
+                    {
+                        combo.DroppedDown = true;
+                    }
+                }));
             }
+
+            // Grow the row in real time as wrapped description text is typed. The editing
+            // control is reused across cells, so unsubscribe first to avoid stacking handlers.
+            if (e.Control is TextBox textBox && dgvLineItems.CurrentCell?.OwningColumn?.Name == "ItemDescription")
+            {
+                textBox.TextChanged -= DescriptionTextBox_TextChanged;
+                textBox.TextChanged += DescriptionTextBox_TextChanged;
+            }
+        }
+
+        private void DescriptionTextBox_TextChanged(object? sender, EventArgs e)
+        {
+            int rowIndex = dgvLineItems.CurrentCell?.RowIndex ?? -1;
+            if (rowIndex < 0) return;
+
+            dgvLineItems.NotifyCurrentCellDirty(true);
+            dgvLineItems.AutoResizeRow(rowIndex, DataGridViewAutoSizeRowMode.AllCells);
         }
 
         private void UpdateCustomRateState(int rowIndex)
@@ -730,6 +879,13 @@ namespace VAR
                 return;
             }
 
+            if (string.IsNullOrWhiteSpace(cboClientContact.Text))
+            {
+                MessageBox.Show("Please enter a client contact.", "Validation Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             // Check for duplicate variation number (only numbers need to be unique, not names)
             if (_dbHelper.VariationNumberExists(txtVariationNumber.Text, _variationId))
             {
@@ -796,6 +952,9 @@ namespace VAR
                 _variation.Id = savedId;  // Important: Update the variation object's ID
                 _hasUnsavedChanges = false;
                 ComputeDataHash();
+
+                string outputFolder = System.IO.Directory.GetCurrentDirectory();
+                new PdfGenerator(_dbHelper, outputFolder).EnsureVariationFolder(_variation);
 
                 // Show temporary "Saved" message
                 lblSaveStatus.Text = "Saved ✓";

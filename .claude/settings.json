@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet build*)",
+      "Bash(dotnet publish*)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git show*)",
+      "Bash(git branch*)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "PowerShell(Get-Item *)",
+      "PowerShell(Test-Path *)",
+      "PowerShell(Get-ChildItem *)",
+      "PowerShell(& cmd.exe /c \"C:\\Users\\Cameron\\Documents\\My Documents\\Programming\\Varistor\\build-and-deploy.bat\")",
+      "PowerShell(& cmd.exe /c \"C:\\Users\\Cameron\\Documents\\My Documents\\Programming\\Varistor\\update-var.bat\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

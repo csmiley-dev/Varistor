@@ -20,6 +20,23 @@ namespace VAR
             QuestPDF.Settings.License = LicenseType.Community;
         }
 
+        public string EnsureVariationFolder(Variation variation)
+        {
+            string folderName = SanitizeFolderName($"{variation.VariationNumber} {variation.VariationName}");
+            string folderPath = Path.Combine(_outputFolder, folderName);
+            Directory.CreateDirectory(folderPath); // no-op if it already exists
+            return folderPath;
+        }
+
+        private static string SanitizeFolderName(string name)
+        {
+            foreach (char c in Path.GetInvalidFileNameChars())
+            {
+                name = name.Replace(c, '_');
+            }
+            return name.Trim();
+        }
+
         public string GenerateSummaryPdf()
         {
             var projectInfo = _dbHelper.GetProjectInfo();
@@ -33,7 +50,7 @@ namespace VAR
             {
                 container.Page(page =>
                 {
-                    page.Size(PageSizes.A4);
+                    page.Size(PageSizes.A4.Landscape());
                     page.Margin(1.5f, Unit.Centimetre);
                     page.PageColor(Colors.White);
                     page.DefaultTextStyle(x => x.FontSize(8).FontFamily("Arial"));
@@ -73,8 +90,9 @@ namespace VAR
                 item.HourlyRate != 0
             ).ToList();
 
-            string fileName = $"{variation.VariationNumber.Replace("#", "")}_{variation.VariationName}_{DateTime.Now:ddMMyyyy_HHmmss}.pdf";
-            string filePath = Path.Combine(_outputFolder, fileName);
+            string variationFolder = EnsureVariationFolder(variation);
+            string fileName = SanitizeFolderName($"{variation.VariationNumber}_{variation.VariationName}_{DateTime.Now:ddMMyyyy_HHmmss}.pdf");
+            string filePath = Path.Combine(variationFolder, fileName);
 
             Document.Create(container =>
             {
@@ -138,6 +156,7 @@ namespace VAR
 
                 // Variations Table
                 column.Item().PaddingTop(10).Text("Variations Summary").FontSize(14).Bold();
+                column.Item().Text($"Date: {DateTime.Now:dd-MM-yyyy}").FontSize(9);
 
                 column.Item().PaddingTop(5).Table(table =>
                 {
@@ -148,7 +167,8 @@ namespace VAR
                         columns.ConstantColumn(60);  // Date
                         columns.ConstantColumn(45);  // Type
                         columns.ConstantColumn(65);  // Total Value
-                        columns.ConstantColumn(75); // Approved By
+                        columns.ConstantColumn(55); // Status
+                        columns.ConstantColumn(90); // Approved By / Void Reason
                         columns.ConstantColumn(60);  // PO
                     });
 
@@ -160,37 +180,57 @@ namespace VAR
                         header.Cell().Element(CellStyle).Text("Date").Bold();
                         header.Cell().Element(CellStyle).Text("Type").Bold();
                         header.Cell().Element(CellStyle).Text("Total Value").Bold();
-                        header.Cell().Element(CellStyle).Text("Approved By").Bold();
+                        header.Cell().Element(CellStyle).Text("Status").Bold();
+                        header.Cell().Element(CellStyle).Text("Approved By / Void Reason").Bold();
                         header.Cell().Element(CellStyle).Text("PO").Bold();
                     });
 
                     // Rows
                     foreach (var variation in variations)
                     {
-                        var bgColor = variation.IsApproved ? Colors.Green.Lighten4 : Colors.White;
+                        string status = variation.IsVoided ? "Voided" : variation.IsApproved ? "Approved" : "Pending";
+                        var bgColor = variation.IsVoided ? Colors.Red.Lighten4
+                            : variation.IsApproved ? Colors.Green.Lighten4
+                            : Colors.White;
 
                         table.Cell().Element(container => CellStyleWithBg(container, bgColor)).Text(variation.VariationNumber);
                         table.Cell().Element(container => CellStyleWithBg(container, bgColor)).Text(variation.VariationName);
                         table.Cell().Element(container => CellStyleWithBg(container, bgColor)).Text(variation.VariationDate);
                         table.Cell().Element(container => CellStyleWithBg(container, bgColor)).Text(variation.VariationType);
                         table.Cell().Element(container => CellStyleWithBg(container, bgColor)).AlignRight().Text($"${variation.TotalValue:N2}");
+                        table.Cell().Element(container => CellStyleWithBg(container, bgColor)).Text(status);
                         table.Cell().Element(container => CellStyleWithBg(container, bgColor)).Text(variation.ApprovedBy ?? "");
                         table.Cell().Element(container => CellStyleWithBg(container, bgColor)).Text(variation.PurchaseOrder ?? "");
                     }
                 });
 
-                // Summary Totals
-                column.Item().PaddingTop(20).Column(col =>
+                // Summary Totals - left to right across the landscape width, leaving more
+                // room above for the variations table
+                column.Item().PaddingTop(20).Row(row =>
                 {
-                    col.Item().Text("All Variations Summary").FontSize(12).Bold();
-                    col.Item().PaddingLeft(10).Text($"Total Additions: ${summary.TotalAdditions:N2}");
-                    col.Item().PaddingLeft(10).Text($"Total Credits: ${summary.TotalCredits:N2}");
-                    col.Item().PaddingLeft(10).Text($"Net Value: ${summary.NetValue:N2}").Bold();
+                    row.RelativeItem().PaddingRight(15).Column(col =>
+                    {
+                        col.Item().Text("All Variations Summary").FontSize(12).Bold();
+                        col.Item().PaddingLeft(10).Text($"Total Additions: ${summary.TotalAdditions:N2}");
+                        col.Item().PaddingLeft(10).Text($"Total Credits: ${summary.TotalCredits:N2}");
+                        col.Item().PaddingLeft(10).Text($"Net Value: ${summary.NetValue:N2}").Bold();
+                    });
 
-                    col.Item().PaddingTop(10).Text("Approved Variations Summary").FontSize(12).Bold();
-                    col.Item().PaddingLeft(10).Text($"Approved Additions: ${summary.ApprovedAdditions:N2}");
-                    col.Item().PaddingLeft(10).Text($"Approved Credits: ${summary.ApprovedCredits:N2}");
-                    col.Item().PaddingLeft(10).Text($"Approved Net Value: ${summary.ApprovedNetValue:N2}").Bold();
+                    row.RelativeItem().PaddingRight(15).Column(col =>
+                    {
+                        col.Item().Text("Approved Variations Summary").FontSize(12).Bold();
+                        col.Item().PaddingLeft(10).Text($"Approved Additions: ${summary.ApprovedAdditions:N2}");
+                        col.Item().PaddingLeft(10).Text($"Approved Credits: ${summary.ApprovedCredits:N2}");
+                        col.Item().PaddingLeft(10).Text($"Approved Net Value: ${summary.ApprovedNetValue:N2}").Bold();
+                    });
+
+                    row.RelativeItem().Column(col =>
+                    {
+                        col.Item().Text("Voided Variations Summary").FontSize(12).Bold();
+                        col.Item().PaddingLeft(10).Text($"Voided Additions: ${summary.VoidedAdditions:N2}");
+                        col.Item().PaddingLeft(10).Text($"Voided Credits: ${summary.VoidedCredits:N2}");
+                        col.Item().PaddingLeft(10).Text($"Voided Net Value: ${summary.VoidedNetValue:N2}").Bold();
+                    });
                 });
             });
         }

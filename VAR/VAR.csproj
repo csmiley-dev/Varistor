@@ -8,6 +8,7 @@
     <AssemblyName>Varistor</AssemblyName>
     <ApplicationTitle>Varistor - Variations Manager</ApplicationTitle>
     <Product>Varistor</Product>
+    <ApplicationIcon>variicon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -21,5 +22,22 @@
       <Link>LJ Logo base transparent.png</Link>
     </None>
   </ItemGroup>
+
+  <!--
+    Version = 1.<total commit count>, so it reads as a normal version number and
+    auto-increments with every commit instead of needing to be bumped by hand.
+    Must hook GetAssemblyVersion - that's the actual SDK target that reads $(Version)
+    to compute $(AssemblyVersion)/$(FileVersion)/$(InformationalVersion), and it runs
+    as an early dependency, well before CoreGenerateAssemblyInfo's own body executes.
+  -->
+  <Target Name="ComputeVersionFromGit" BeforeTargets="GetAssemblyVersion">
+    <Exec Command="git rev-list --count HEAD" ConsoleToMSBuild="true" StandardOutputImportance="low" ContinueOnError="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitCommitCount" />
+    </Exec>
+    <PropertyGroup>
+      <GitCommitCount Condition="'$(GitCommitCount)' == ''">0</GitCommitCount>
+      <Version>1.$(GitCommitCount)</Version>
+    </PropertyGroup>
+  </Target>
 
 </Project>

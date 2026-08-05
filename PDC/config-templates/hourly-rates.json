@@ -1,0 +1,5 @@
+[
+  { "name": "Standard", "value": 100.0 },
+  { "name": "Senior", "value": 150.0 },
+  { "name": "Specialist", "value": 200.0 }
+]
