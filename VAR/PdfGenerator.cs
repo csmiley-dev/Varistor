@@ -163,44 +163,50 @@ namespace VAR
                     table.ColumnsDefinition(columns =>
                     {
                         columns.ConstantColumn(50);  // Variation #
-                        columns.RelativeColumn(3);    // Name
+                        columns.RelativeColumn(2);    // Name
                         columns.ConstantColumn(60);  // Date
                         columns.ConstantColumn(45);  // Type
                         columns.ConstantColumn(65);  // Total Value
                         columns.ConstantColumn(55); // Status
-                        columns.ConstantColumn(90); // Approved By / Void Reason
-                        columns.ConstantColumn(60);  // PO
+                        columns.ConstantColumn(80); // Approved By / Void Reason
+                        columns.ConstantColumn(70); // Created By
+                        columns.RelativeColumn(2);   // Notes
+                        columns.ConstantColumn(55);  // PO
                     });
 
                     // Header
                     table.Header(header =>
                     {
-                        header.Cell().Element(CellStyle).Text("Variation #").Bold();
-                        header.Cell().Element(CellStyle).Text("Name").Bold();
-                        header.Cell().Element(CellStyle).Text("Date").Bold();
-                        header.Cell().Element(CellStyle).Text("Type").Bold();
-                        header.Cell().Element(CellStyle).Text("Total Value").Bold();
-                        header.Cell().Element(CellStyle).Text("Status").Bold();
-                        header.Cell().Element(CellStyle).Text("Approved By / Void Reason").Bold();
-                        header.Cell().Element(CellStyle).Text("PO").Bold();
+                        header.Cell().Element(HeaderCellStyle).Text("Variation #");
+                        header.Cell().Element(HeaderCellStyle).Text("Name");
+                        header.Cell().Element(HeaderCellStyle).Text("Date");
+                        header.Cell().Element(HeaderCellStyle).Text("Type");
+                        header.Cell().Element(HeaderCellStyle).Text("Total Value");
+                        header.Cell().Element(HeaderCellStyle).Text("Status");
+                        header.Cell().Element(HeaderCellStyle).Text("Approved By / Void Reason");
+                        header.Cell().Element(HeaderCellStyle).Text("Created By");
+                        header.Cell().Element(HeaderCellStyle).Text("Notes");
+                        header.Cell().Element(HeaderCellStyle).Text("PO");
                     });
 
                     // Rows
                     foreach (var variation in variations)
                     {
                         string status = variation.IsVoided ? "Voided" : variation.IsApproved ? "Approved" : "Pending";
-                        var bgColor = variation.IsVoided ? Colors.Red.Lighten4
-                            : variation.IsApproved ? Colors.Green.Lighten4
-                            : Colors.White;
+                        string statusColor = variation.IsVoided ? Colors.Red.Darken2
+                            : variation.IsApproved ? Colors.Green.Darken2
+                            : Colors.Black;
 
-                        table.Cell().Element(container => CellStyleWithBg(container, bgColor)).Text(variation.VariationNumber);
-                        table.Cell().Element(container => CellStyleWithBg(container, bgColor)).Text(variation.VariationName);
-                        table.Cell().Element(container => CellStyleWithBg(container, bgColor)).Text(variation.VariationDate);
-                        table.Cell().Element(container => CellStyleWithBg(container, bgColor)).Text(variation.VariationType);
-                        table.Cell().Element(container => CellStyleWithBg(container, bgColor)).AlignRight().Text($"${variation.TotalValue:N2}");
-                        table.Cell().Element(container => CellStyleWithBg(container, bgColor)).Text(status);
-                        table.Cell().Element(container => CellStyleWithBg(container, bgColor)).Text(variation.ApprovedBy ?? "");
-                        table.Cell().Element(container => CellStyleWithBg(container, bgColor)).Text(variation.PurchaseOrder ?? "");
+                        table.Cell().Element(CellStyle).Text(variation.VariationNumber);
+                        table.Cell().Element(CellStyle).Text(variation.VariationName);
+                        table.Cell().Element(CellStyle).Text(variation.VariationDate);
+                        table.Cell().Element(CellStyle).Text(variation.VariationType);
+                        table.Cell().Element(CellStyle).AlignRight().Text($"${variation.TotalValue:N2}");
+                        table.Cell().Element(CellStyle).Text(status).FontColor(statusColor).Bold();
+                        table.Cell().Element(CellStyle).Text(variation.ApprovedBy ?? "");
+                        table.Cell().Element(CellStyle).Text(variation.CreatedBy ?? "");
+                        table.Cell().Element(CellStyle).Text(variation.Notes ?? "");
+                        table.Cell().Element(CellStyle).Text(variation.PurchaseOrder ?? "");
                     }
                 });
 
@@ -248,6 +254,8 @@ namespace VAR
                         col.Item().Text($"Contact: {variation.ClientContact}").FontSize(11);
                     col.Item().PaddingTop(5).Text($"Variation: {variation.VariationNumber} - {variation.VariationName}").FontSize(13).Bold();
                     col.Item().Text($"Date: {variation.VariationDate}").FontSize(11);
+                    if (!string.IsNullOrEmpty(variation.CreatedBy))
+                        col.Item().Text($"Created By: {variation.CreatedBy}").FontSize(11);
                 });
 
                 // Line Items Table
@@ -310,6 +318,16 @@ namespace VAR
                     col.Item().PaddingTop(5).Text($"Grand Total: ${grandTotal:N2}").FontSize(13).Bold();
                 });
 
+                // Notes
+                if (!string.IsNullOrWhiteSpace(variation.Notes))
+                {
+                    column.Item().PaddingTop(20).Column(col =>
+                    {
+                        col.Item().Text("Notes").FontSize(12).Bold();
+                        col.Item().PaddingLeft(10).Text(variation.Notes);
+                    });
+                }
+
                 // Approval Info
                 if (variation.IsApproved)
                 {
@@ -330,9 +348,10 @@ namespace VAR
             return container.BorderBottom(1).BorderColor(Colors.Grey.Lighten2).PaddingVertical(5).PaddingHorizontal(3);
         }
 
-        private static IContainer CellStyleWithBg(IContainer container, string backgroundColor)
+        private static IContainer HeaderCellStyle(IContainer container)
         {
-            return container.Background(backgroundColor).BorderBottom(1).BorderColor(Colors.Grey.Lighten2).PaddingVertical(5).PaddingHorizontal(3);
+            return container.Background(Colors.Grey.Lighten3).BorderBottom(1).BorderColor(Colors.Grey.Darken1)
+                .PaddingVertical(5).PaddingHorizontal(3).DefaultTextStyle(x => x.Bold());
         }
     }
 }

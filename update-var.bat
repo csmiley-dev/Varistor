@@ -10,5 +10,8 @@ if errorlevel 1 (
 echo.
 echo Updating Varistor on X:\BMS\Programs\VAR\ ...
 xcopy "VAR\bin\Release\net8.0-windows\win-x64\publish\*.*" "X:\BMS\Programs\VAR\" /Y /E /I /Q
+
+if not exist "X:\BMS\Programs\VAR\staff.json" copy "VAR\config-templates\staff.json" "X:\BMS\Programs\VAR\staff.json" >nul
+
 echo Done!
 pause

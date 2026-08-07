@@ -121,10 +121,23 @@ namespace VAR
                 MultiSelect = false,
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
                 EditMode = DataGridViewEditMode.EditOnEnter,
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                RowHeadersVisible = false,
+                BorderStyle = BorderStyle.FixedSingle,
+                CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal,
+                GridColor = Color.FromArgb(225, 225, 230),
+                EnableHeadersVisualStyles = false,
+                ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None,
+                ColumnHeadersHeight = 34,
+                RowTemplate = { Height = 28 }
             };
             dgvVariations.DefaultCellStyle.SelectionBackColor = dgvVariations.DefaultCellStyle.BackColor;
             dgvVariations.DefaultCellStyle.SelectionForeColor = dgvVariations.DefaultCellStyle.ForeColor;
+            dgvVariations.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(68, 88, 120);
+            dgvVariations.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            dgvVariations.ColumnHeadersDefaultCellStyle.Font = new Font("Arial", 9, FontStyle.Bold);
+            dgvVariations.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
+            dgvVariations.ColumnHeadersDefaultCellStyle.Padding = new Padding(4, 0, 0, 0);
             dgvVariations.CellContentClick += DgvVariations_CellContentClick;
             dgvVariations.CellClick += DgvVariations_CellClick;
             dgvVariations.CellValueChanged += DgvVariations_CellValueChanged;
@@ -492,7 +505,7 @@ namespace VAR
             dgvVariations.Columns.Add(new DataGridViewTextBoxColumn
             {
                 DataPropertyName = "ApprovedDate",
-                HeaderText = "Approved Date",
+                HeaderText = "Approved/Voided Date",
                 FillWeight = 117,
                 ReadOnly = true,
                 Name = "ApprovedDate"
@@ -601,20 +614,22 @@ namespace VAR
             if (e.RowIndex >= 0 && e.RowIndex < variations.Count)
             {
                 var variation = variations[e.RowIndex];
+                var actionCell = dgvVariations.Rows[e.RowIndex].Cells["ActionCombo"];
+
                 if (variation.IsVoided)
                 {
-                    dgvVariations.Rows[e.RowIndex].DefaultCellStyle.BackColor = Color.FromArgb(255, 230, 230);
-                    dgvVariations.Rows[e.RowIndex].DefaultCellStyle.SelectionBackColor = Color.FromArgb(255, 230, 230);
+                    actionCell.Style.ForeColor = Color.FromArgb(190, 0, 0);
+                    actionCell.Style.Font = new Font(dgvVariations.Font, FontStyle.Bold);
                 }
                 else if (variation.IsApproved)
                 {
-                    dgvVariations.Rows[e.RowIndex].DefaultCellStyle.BackColor = Color.FromArgb(230, 255, 230);
-                    dgvVariations.Rows[e.RowIndex].DefaultCellStyle.SelectionBackColor = Color.FromArgb(230, 255, 230);
+                    actionCell.Style.ForeColor = Color.FromArgb(0, 130, 0);
+                    actionCell.Style.Font = new Font(dgvVariations.Font, FontStyle.Bold);
                 }
                 else
                 {
-                    dgvVariations.Rows[e.RowIndex].DefaultCellStyle.BackColor = Color.White;
-                    dgvVariations.Rows[e.RowIndex].DefaultCellStyle.SelectionBackColor = Color.White;
+                    actionCell.Style.ForeColor = dgvVariations.DefaultCellStyle.ForeColor;
+                    actionCell.Style.Font = dgvVariations.Font;
                 }
             }
         }

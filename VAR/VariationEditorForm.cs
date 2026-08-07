@@ -13,12 +13,16 @@ namespace VAR
         private Variation _variation;
         private List<LineItem> _lineItems;
         private List<HourlyRate> _hourlyRates;
+        private List<string> _staffNames;
         private bool _hasUnsavedChanges = false;
 
         private TextBox txtVariationNumber;
         private TextBox txtVariationName;
         private DateTimePicker dtpVariationDate;
         private ComboBox cboClientContact;
+        private ComboBox cboCreatedBy;
+        private Label lblNotes;
+        private TextBox txtNotes;
         private DataGridView dgvLineItems;
         private Label lblMaterialSubtotal;
         private Label lblLabourSubtotal;
@@ -35,13 +39,15 @@ namespace VAR
 
         // Vertical offsets of the controls below the grid, measured from the grid's bottom edge.
         // Used to reflow them when the grid grows/shrinks on window resize.
+        private const int GapGridToNotes = 10;
+        private const int NotesHeight = 60;
         private const int GridBottomOffsetMoveButtons = 10;
         private const int GridBottomOffsetMaterialSubtotal = 50;
         private const int GridBottomOffsetLabourSubtotal = 75;
         private const int GridBottomOffsetGrandTotal = 100;
         private const int GridBottomOffsetSaveStatus = 60;
         private const int GridBottomOffsetActionButtons = 90;
-        private const int ReservedHeightBelowGrid = 145;
+        private const int ReservedHeightBelowGrid = 145 + GapGridToNotes + NotesHeight;
         private const int MinGridHeight = 200;
 
         public VariationEditorForm(DatabaseHelper dbHelper, int? variationId = null)
@@ -183,6 +189,25 @@ namespace VAR
             dtpVariationDate.Value = variationDate == DateTime.MinValue ? DateTime.Now : variationDate;
             dtpVariationDate.ValueChanged += Control_Changed;
 
+            // Created By (third row, left side - was previously empty space above the grid)
+            Label lblCreatedBy = new Label
+            {
+                Text = "Created By:",
+                Location = new Point(leftMargin, topMargin + rowHeight * 2),
+                Size = new Size(labelWidth, 20),
+                Font = new Font("Arial", 10, FontStyle.Bold),
+                ForeColor = Color.FromArgb(60, 60, 60)
+            };
+            cboCreatedBy = new ComboBox
+            {
+                Location = new Point(leftMargin + labelWidth, topMargin + rowHeight * 2),
+                Size = new Size(controlWidth, 20),
+                DropDownStyle = ComboBoxStyle.DropDown,
+                Font = new Font("Arial", 10)
+            };
+            cboCreatedBy.SelectedIndexChanged += Control_Changed;
+            cboCreatedBy.TextChanged += Control_Changed;
+
             // Line Items Grid
             dgvLineItems = new DataGridView
             {
@@ -202,6 +227,26 @@ namespace VAR
             dgvLineItems.CellClick += DgvLineItems_CellClick;
             dgvLineItems.EditingControlShowing += DgvLineItems_EditingControlShowing;
             dgvLineItems.CellFormatting += DgvLineItems_CellFormatting;
+
+            // Notes (between the grid and the Add/Move buttons)
+            lblNotes = new Label
+            {
+                Text = "Notes:",
+                Location = new Point(leftMargin, topMargin + rowHeight * 3 + 510),
+                Size = new Size(labelWidth, 20),
+                Font = new Font("Arial", 10, FontStyle.Bold),
+                ForeColor = Color.FromArgb(60, 60, 60)
+            };
+            txtNotes = new TextBox
+            {
+                Location = new Point(leftMargin + labelWidth, topMargin + rowHeight * 3 + 510),
+                Size = new Size(1350 - labelWidth, NotesHeight),
+                Multiline = true,
+                ScrollBars = ScrollBars.Vertical,
+                Font = new Font("Arial", 9),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+            };
+            txtNotes.TextChanged += Control_Changed;
 
             // Add Row Button
             btnAddRow = new Button
@@ -335,7 +380,11 @@ namespace VAR
             this.Controls.Add(dtpVariationDate);
             this.Controls.Add(lblClientContact);
             this.Controls.Add(cboClientContact);
+            this.Controls.Add(lblCreatedBy);
+            this.Controls.Add(cboCreatedBy);
             this.Controls.Add(dgvLineItems);
+            this.Controls.Add(lblNotes);
+            this.Controls.Add(txtNotes);
             this.Controls.Add(btnAddRow);
             this.Controls.Add(btnMoveUp);
             this.Controls.Add(btnMoveDown);
@@ -357,18 +406,22 @@ namespace VAR
 
             int gridBottom = dgvLineItems.Top + dgvLineItems.Height;
 
-            btnAddRow.Top = gridBottom + GridBottomOffsetMoveButtons;
-            btnMoveUp.Top = gridBottom + GridBottomOffsetMoveButtons;
-            btnMoveDown.Top = gridBottom + GridBottomOffsetMoveButtons;
+            lblNotes.Top = gridBottom + GapGridToNotes;
+            txtNotes.Top = gridBottom + GapGridToNotes;
+            int notesBottom = txtNotes.Top + txtNotes.Height;
 
-            lblMaterialSubtotal.Top = gridBottom + GridBottomOffsetMaterialSubtotal;
-            lblLabourSubtotal.Top = gridBottom + GridBottomOffsetLabourSubtotal;
-            lblGrandTotal.Top = gridBottom + GridBottomOffsetGrandTotal;
+            btnAddRow.Top = notesBottom + GridBottomOffsetMoveButtons;
+            btnMoveUp.Top = notesBottom + GridBottomOffsetMoveButtons;
+            btnMoveDown.Top = notesBottom + GridBottomOffsetMoveButtons;
 
-            lblSaveStatus.Top = gridBottom + GridBottomOffsetSaveStatus;
-            btnSave.Top = gridBottom + GridBottomOffsetActionButtons;
-            btnClose.Top = gridBottom + GridBottomOffsetActionButtons;
-            btnPrint.Top = gridBottom + GridBottomOffsetActionButtons;
+            lblMaterialSubtotal.Top = notesBottom + GridBottomOffsetMaterialSubtotal;
+            lblLabourSubtotal.Top = notesBottom + GridBottomOffsetLabourSubtotal;
+            lblGrandTotal.Top = notesBottom + GridBottomOffsetGrandTotal;
+
+            lblSaveStatus.Top = notesBottom + GridBottomOffsetSaveStatus;
+            btnSave.Top = notesBottom + GridBottomOffsetActionButtons;
+            btnClose.Top = notesBottom + GridBottomOffsetActionButtons;
+            btnPrint.Top = notesBottom + GridBottomOffsetActionButtons;
         }
 
         private void LoadData()
@@ -385,6 +438,21 @@ namespace VAR
             {
                 cboClientContact.Text = _variation.ClientContact;
             }
+
+            // Load staff names for Created By
+            _staffNames = _dbHelper.GetStaffNames();
+            cboCreatedBy.Items.Clear();
+            foreach (var name in _staffNames)
+            {
+                cboCreatedBy.Items.Add(name);
+            }
+
+            if (!string.IsNullOrEmpty(_variation.CreatedBy))
+            {
+                cboCreatedBy.Text = _variation.CreatedBy;
+            }
+
+            txtNotes.Text = _variation.Notes ?? "";
 
             // Setup grid columns
             dgvLineItems.Columns.Clear();
@@ -533,7 +601,7 @@ namespace VAR
         private void ComputeDataHash()
         {
             // Create a simple hash of all data to detect real changes
-            var hashData = $"{txtVariationNumber.Text}|{txtVariationName.Text}|{dtpVariationDate.Value}|{cboClientContact.Text}|";
+            var hashData = $"{txtVariationNumber.Text}|{txtVariationName.Text}|{dtpVariationDate.Value}|{cboClientContact.Text}|{cboCreatedBy.Text}|{txtNotes.Text}|";
             foreach (DataGridViewRow row in dgvLineItems.Rows)
             {
                 for (int i = 0; i < row.Cells.Count; i++)
@@ -548,7 +616,7 @@ namespace VAR
 
         private bool HasActualChanges()
         {
-            var currentHash = $"{txtVariationNumber.Text}|{txtVariationName.Text}|{dtpVariationDate.Value}|{cboClientContact.Text}|";
+            var currentHash = $"{txtVariationNumber.Text}|{txtVariationName.Text}|{dtpVariationDate.Value}|{cboClientContact.Text}|{cboCreatedBy.Text}|{txtNotes.Text}|";
             foreach (DataGridViewRow row in dgvLineItems.Rows)
             {
                 for (int i = 0; i < row.Cells.Count; i++)
@@ -562,7 +630,13 @@ namespace VAR
 
         private void DgvLineItems_CurrentCellDirtyStateChanged(object? sender, EventArgs e)
         {
-            if (dgvLineItems.IsCurrentCellDirty)
+            // Only combo box columns (ItemType, HourlyRate) need the value committed
+            // immediately, so selecting a new item updates dependent calculations right away.
+            // Forcing this on every keystroke for plain text columns too (MaterialQty,
+            // MaterialCost, etc.) triggered a commit + full row recalculation on every
+            // character typed while the cell was still mid-edit, which corrupted the cell's
+            // rendering (it would paint solid black until a different cell was clicked).
+            if (dgvLineItems.IsCurrentCellDirty && dgvLineItems.CurrentCell?.OwningColumn is DataGridViewComboBoxColumn)
             {
                 dgvLineItems.CommitEdit(DataGridViewDataErrorContexts.Commit);
             }
@@ -886,6 +960,13 @@ namespace VAR
                 return;
             }
 
+            if (string.IsNullOrWhiteSpace(cboCreatedBy.Text))
+            {
+                MessageBox.Show("Please enter who is creating this variation.", "Validation Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             // Check for duplicate variation number (only numbers need to be unique, not names)
             if (_dbHelper.VariationNumberExists(txtVariationNumber.Text, _variationId))
             {
@@ -899,6 +980,8 @@ namespace VAR
             _variation.VariationName = txtVariationName.Text.Trim();
             _variation.VariationDate = dtpVariationDate.Value.ToString("dd-MM-yyyy");
             _variation.ClientContact = cboClientContact.Text.Trim();
+            _variation.CreatedBy = cboCreatedBy.Text.Trim();
+            _variation.Notes = txtNotes.Text.Trim();
 
             // Collect line items from grid
             var lineItems = new List<LineItem>();

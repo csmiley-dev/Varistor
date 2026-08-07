@@ -24,6 +24,8 @@ namespace VAR
         public string? JobNumber { get; set; }
         public decimal TotalValue { get; set; }
         public int DisplayOrder { get; set; }
+        public string? CreatedBy { get; set; }
+        public string? Notes { get; set; }
 
         public string VariationType
         {

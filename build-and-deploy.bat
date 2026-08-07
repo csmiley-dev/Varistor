@@ -71,6 +71,11 @@ if errorlevel 1 (
 echo              Done.
 
 echo.
+echo [Step 6b] Ensuring default config files exist on X:\BMS\Programs\VAR\ ...
+if not exist "X:\BMS\Programs\VAR\staff.json" copy "VAR\config-templates\staff.json" "X:\BMS\Programs\VAR\staff.json" >nul
+echo              Done. (existing files, if any, were left untouched)
+
+echo.
 echo [Step 7/7] Creating PDC shortcut at X:\Projects\PDC.lnk ...
 powershell -NoProfile -ExecutionPolicy Bypass -Command "$WshShell = New-Object -comObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut('X:\Projects\PDC.lnk'); $Shortcut.TargetPath = 'X:\BMS\Programs\PDC\PDC.exe'; $Shortcut.WorkingDirectory = 'X:\BMS\Programs\PDC'; $Shortcut.Save()"
 echo              Done.
