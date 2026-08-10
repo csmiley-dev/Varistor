@@ -280,19 +280,16 @@ namespace PDC
                 Directory.CreateDirectory(fullPath);
             }
 
-            // Create shortcut to Varistor instead of copying all files
+            // Create a launcher batch file for Varistor instead of copying all files
             string variationsFolder = Path.Combine(projectPath, "Variations");
             string varSourceFolder = @"X:\BMS\Programs\VAR";
             string varExePath = Path.Combine(varSourceFolder, "Varistor.exe");
 
             if (File.Exists(varExePath))
             {
-                // Create shortcut to centralized Varistor
-                CreateShortcut(
-                    Path.Combine(variationsFolder, "Varistor.lnk"),
-                    varExePath,
-                    variationsFolder  // Set working directory to Variations folder so it finds project.db
-                );
+                // A .bat launcher (not a .lnk shortcut) so the project folder can be moved/
+                // archived later and still work - see CreateVarLauncher for why.
+                CreateVarLauncher(Path.Combine(variationsFolder, "Varistor.bat"), varExePath);
             }
             else
             {
@@ -312,27 +309,15 @@ namespace PDC
             CopyClientContacts(clientName, projectDbPath);
         }
 
-        private void CreateShortcut(string shortcutPath, string targetPath, string workingDirectory)
+        private void CreateVarLauncher(string batPath, string varExePath)
         {
-            // Use PowerShell to create shortcut (works without additional COM references)
-            string psCommand = $@"
-                $WshShell = New-Object -comObject WScript.Shell;
-                $Shortcut = $WshShell.CreateShortcut('{shortcutPath}');
-                $Shortcut.TargetPath = '{targetPath}';
-                $Shortcut.WorkingDirectory = '{workingDirectory}';
-                $Shortcut.Save()
-            ";
-
-            var psi = new System.Diagnostics.ProcessStartInfo
-            {
-                FileName = "powershell.exe",
-                Arguments = $"-NoProfile -ExecutionPolicy Bypass -Command \"{psCommand}\"",
-                CreateNoWindow = true,
-                UseShellExecute = false
-            };
-
-            var process = System.Diagnostics.Process.Start(psi);
-            process.WaitForExit();
+            // A .lnk shortcut's "Start in" (working directory) is a static absolute path
+            // baked in at creation time - if the project folder is later moved or archived,
+            // it goes stale and Varistor can't find project.db. A batch file instead uses
+            // its own current folder as the working directory by default, re-evaluated fresh
+            // on every double-click, so it keeps working no matter where the folder ends up.
+            string batContent = $"@echo off\r\nstart \"\" \"{varExePath}\"\r\n";
+            File.WriteAllText(batPath, batContent);
         }
 
         private void CopyAllFiles(string sourceFolder, string destFolder)

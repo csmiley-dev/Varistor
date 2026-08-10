@@ -94,6 +94,6 @@ echo USAGE:
 echo 1. Go to X:\Projects\
 echo 2. Double-click PDC.lnk
 echo 3. Create a new project
-echo 4. Use Varistor.lnk in the project's Variations folder
+echo 4. Use Varistor.bat in the project's Variations folder
 echo.
 pause
