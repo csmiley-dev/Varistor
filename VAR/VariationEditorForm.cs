@@ -99,6 +99,12 @@ namespace VAR
             this.KeyPreview = true;
             this.KeyDown += VariationEditorForm_KeyDown;
             this.Resize += (s, e) => ApplyGridSizeAndLayout();
+            // Re-run the wrap-based row sizing once the form is actually shown: the initial
+            // call in LoadData() happens from the constructor, before the grid's Fill-mode
+            // columns have undergone a real layout pass, so it can compute wrap height using
+            // a not-yet-final column width - producing a too-short row that then looked
+            // "collapsed" for any variation loaded with an existing multi-line description.
+            this.Shown += (s, e) => dgvLineItems.AutoResizeRows(DataGridViewAutoSizeRowsMode.AllCells);
 
             try
             {
@@ -217,8 +223,17 @@ namespace VAR
                 AllowUserToDeleteRows = false,
                 SelectionMode = DataGridViewSelectionMode.CellSelect,
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells,
-                DefaultCellStyle = new DataGridViewCellStyle { WrapMode = DataGridViewTriState.True },
+                // AllCells here (the "ambient" mode) means the grid continuously re-measures
+                // EVERY cell in a row - not just the one being edited - to determine the row's
+                // height, on every single edit anywhere in that row. Since ItemDescription
+                // still needs WrapMode=True, that column's wrap-measurement kept getting
+                // re-triggered while typing in a completely different cell in the same row,
+                // which is what caused the random-feeling black rendering across different
+                // fields. Row growth for long descriptions is instead handled by explicit,
+                // targeted AutoResizeRow calls (see DescriptionTextBox_TextChanged and
+                // DgvLineItems_CellValueChanged) only when Description's own content changes.
+                AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None,
+                DefaultCellStyle = new DataGridViewCellStyle { WrapMode = DataGridViewTriState.False },
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
             dgvLineItems.CellValueChanged += DgvLineItems_CellValueChanged;
@@ -227,6 +242,8 @@ namespace VAR
             dgvLineItems.CellClick += DgvLineItems_CellClick;
             dgvLineItems.EditingControlShowing += DgvLineItems_EditingControlShowing;
             dgvLineItems.CellFormatting += DgvLineItems_CellFormatting;
+            dgvLineItems.KeyDown += DgvLineItems_KeyDown;
+            EnableDoubleBuffering(dgvLineItems);
 
             // Notes (between the grid and the Add/Move buttons)
             lblNotes = new Label
@@ -628,6 +645,37 @@ namespace VAR
             return currentHash.GetHashCode().ToString() != _originalDataHash;
         }
 
+        private static void EnableDoubleBuffering(DataGridView grid)
+        {
+            // DataGridView's own double buffering doesn't fully cover rapid repaints
+            // triggered while a cell is actively being edited (row auto-sizing, cell
+            // formatting, etc.), which is what caused cells to render solid black mid-edit
+            // until a different cell was clicked. DoubleBuffered is a protected property on
+            // Control, so it has to be set via reflection.
+            typeof(DataGridView).InvokeMember(
+                "DoubleBuffered",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.SetProperty,
+                null,
+                grid,
+                new object[] { true });
+        }
+
+        private void DgvLineItems_KeyDown(object? sender, KeyEventArgs e)
+        {
+            // Delete clears a selected text cell's content without needing to enter edit
+            // mode first (matches common spreadsheet behavior).
+            if (e.KeyCode != Keys.Delete || dgvLineItems.IsCurrentCellInEditMode) return;
+
+            foreach (DataGridViewCell cell in dgvLineItems.SelectedCells)
+            {
+                if (!cell.ReadOnly && cell is DataGridViewTextBoxCell)
+                {
+                    cell.Value = "";
+                }
+            }
+            e.Handled = true;
+        }
+
         private void DgvLineItems_CurrentCellDirtyStateChanged(object? sender, EventArgs e)
         {
             // Only combo box columns (ItemType, HourlyRate) need the value committed
@@ -832,6 +880,18 @@ namespace VAR
 
         private void DgvLineItems_EditingControlShowing(object? sender, DataGridViewEditingControlShowingEventArgs e)
         {
+            // Force the editing control's colors to match the cell it's editing. Without
+            // this, Windows can apply OS-level dark-mode theming to the native edit control
+            // (black background, white text) independently of the DataGridView's own
+            // light-themed cells drawn around it - inconsistently, which is why it looked
+            // random. Explicit colors here take precedence over that theming.
+            var cellStyle = dgvLineItems.CurrentCell?.InheritedStyle;
+            if (e.Control is Control editingControl)
+            {
+                editingControl.BackColor = cellStyle?.BackColor ?? Color.White;
+                editingControl.ForeColor = Color.Black;
+            }
+
             // Auto-open dropdown when editing combobox. The shared editing control isn't
             // repositioned to the new cell until after this event returns, so opening it
             // immediately drops it down at the previous cell's stale location. Defer until
