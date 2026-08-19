@@ -91,7 +91,7 @@ namespace VAR
             ).ToList();
 
             string variationFolder = EnsureVariationFolder(variation);
-            string fileName = SanitizeFolderName($"{variation.VariationNumber}_{variation.VariationName}_{DateTime.Now:ddMMyyyy_HHmmss}.pdf");
+            string fileName = SanitizeFolderName($"{projectInfo.ProjectNumber}_{variation.VariationNumber}_{variation.VariationName}_{DateTime.Now:ddMMyyyy_HHmmss}.pdf");
             string filePath = Path.Combine(variationFolder, fileName);
 
             Document.Create(container =>
@@ -185,7 +185,7 @@ namespace VAR
                         header.Cell().Element(HeaderCellStyle).Text("Status");
                         header.Cell().Element(HeaderCellStyle).Text("Approved By / Void Reason");
                         header.Cell().Element(HeaderCellStyle).Text("Created By");
-                        header.Cell().Element(HeaderCellStyle).Text("Notes");
+                        header.Cell().Element(HeaderCellStyle).Text("Scope of Works");
                         header.Cell().Element(HeaderCellStyle).Text("PO");
                     });
 
@@ -249,14 +249,39 @@ namespace VAR
                 column.Item().PaddingVertical(10).Column(col =>
                 {
                     col.Item().Text($"Project: {projectInfo.ProjectName} {projectInfo.ProjectNumber}").FontSize(14).Bold();
+                    col.Item().PaddingTop(5).Text($"Variation: {variation.VariationNumber} - {variation.VariationName}").FontSize(13).Bold();
                     col.Item().Text($"Client: {projectInfo.ClientName}").FontSize(12);
                     if (!string.IsNullOrEmpty(variation.ClientContact))
                         col.Item().Text($"Contact: {variation.ClientContact}").FontSize(11);
-                    col.Item().PaddingTop(5).Text($"Variation: {variation.VariationNumber} - {variation.VariationName}").FontSize(13).Bold();
                     col.Item().Text($"Date: {variation.VariationDate}").FontSize(11);
                     if (!string.IsNullOrEmpty(variation.CreatedBy))
                         col.Item().Text($"Created By: {variation.CreatedBy}").FontSize(11);
                 });
+
+                // Scope of Works and Exclusions, side by side, above the line items
+                if (!string.IsNullOrWhiteSpace(variation.Notes) || !string.IsNullOrWhiteSpace(variation.Exclusions))
+                {
+                    column.Item().PaddingBottom(10).Row(row =>
+                    {
+                        if (!string.IsNullOrWhiteSpace(variation.Notes))
+                        {
+                            row.RelativeItem().PaddingRight(10).Column(col =>
+                            {
+                                col.Item().Text("Scope of Works").FontSize(11).Bold();
+                                col.Item().Text(variation.Notes).FontSize(9);
+                            });
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(variation.Exclusions))
+                        {
+                            row.RelativeItem().Column(col =>
+                            {
+                                col.Item().Text("Exclusions").FontSize(11).Bold();
+                                col.Item().Text(variation.Exclusions).FontSize(9);
+                            });
+                        }
+                    });
+                }
 
                 // Line Items Table
                 column.Item().PaddingTop(10).Table(table =>
@@ -311,22 +336,16 @@ namespace VAR
                 decimal labourTotal = lineItems.Sum(i => i.LabourTotal);
                 decimal grandTotal = lineItems.Sum(i => i.LineTotal);
 
-                column.Item().PaddingTop(15).AlignRight().Column(col =>
+                column.Item().PaddingTop(15).Column(col =>
                 {
-                    col.Item().Text($"Material Subtotal: ${materialTotal:N2}").FontSize(11);
-                    col.Item().Text($"Labour Subtotal: ${labourTotal:N2}").FontSize(11);
-                    col.Item().PaddingTop(5).Text($"Grand Total: ${grandTotal:N2}").FontSize(13).Bold();
+                    // AlignRight has to be applied per-line, not just on the wrapping column -
+                    // otherwise each line's text box is only as wide as its own content, so
+                    // varying label lengths ("Material Subtotal:" vs "Grand Total:") leave the
+                    // dollar amounts at different right edges instead of lined up.
+                    col.Item().AlignRight().Text($"Material Subtotal: ${materialTotal:N2}").FontSize(11);
+                    col.Item().AlignRight().Text($"Labour Subtotal: ${labourTotal:N2}").FontSize(11);
+                    col.Item().PaddingTop(5).AlignRight().Text($"Grand Total: ${grandTotal:N2}").FontSize(13).Bold();
                 });
-
-                // Notes
-                if (!string.IsNullOrWhiteSpace(variation.Notes))
-                {
-                    column.Item().PaddingTop(20).Column(col =>
-                    {
-                        col.Item().Text("Notes").FontSize(12).Bold();
-                        col.Item().PaddingLeft(10).Text(variation.Notes);
-                    });
-                }
 
                 // Approval Info
                 if (variation.IsApproved)

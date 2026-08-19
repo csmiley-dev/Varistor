@@ -21,8 +21,10 @@ namespace VAR
         private DateTimePicker dtpVariationDate;
         private ComboBox cboClientContact;
         private ComboBox cboCreatedBy;
-        private Label lblNotes;
-        private TextBox txtNotes;
+        private Label lblScopeOfWorks;
+        private TextBox txtScopeOfWorks;
+        private Label lblExclusions;
+        private TextBox txtExclusions;
         private DataGridView dgvLineItems;
         private Label lblMaterialSubtotal;
         private Label lblLabourSubtotal;
@@ -41,6 +43,7 @@ namespace VAR
         // Used to reflow them when the grid grows/shrinks on window resize.
         private const int GapGridToNotes = 10;
         private const int NotesHeight = 60;
+        private const int NotesColumnGap = 15;
         private const int GridBottomOffsetMoveButtons = 10;
         private const int GridBottomOffsetMaterialSubtotal = 50;
         private const int GridBottomOffsetLabourSubtotal = 75;
@@ -105,6 +108,17 @@ namespace VAR
             // a not-yet-final column width - producing a too-short row that then looked
             // "collapsed" for any variation loaded with an existing multi-line description.
             this.Shown += (s, e) => dgvLineItems.AutoResizeRows(DataGridViewAutoSizeRowsMode.AllCells);
+            // Clicking another control already ends the grid's edit mode via the normal
+            // WinForms focus-change handling. Clicking the form's own blank background
+            // doesn't - there's no control there to receive focus, so the grid never gets a
+            // signal to commit. Handle it explicitly.
+            this.MouseDown += (s, e) =>
+            {
+                if (dgvLineItems.IsCurrentCellInEditMode)
+                {
+                    dgvLineItems.EndEdit();
+                }
+            };
 
             try
             {
@@ -245,25 +259,46 @@ namespace VAR
             dgvLineItems.KeyDown += DgvLineItems_KeyDown;
             EnableDoubleBuffering(dgvLineItems);
 
-            // Notes (between the grid and the Add/Move buttons)
-            lblNotes = new Label
+            // Scope of Works and Exclusions, side by side (between the grid and the Add/Move
+            // buttons). Left/Width are recomputed in ApplyGridSizeAndLayout, since a fixed
+            // 50/50 split needs to be re-derived whenever the grid's width changes.
+            lblScopeOfWorks = new Label
             {
-                Text = "Notes:",
+                Text = "Scope of Works:",
                 Location = new Point(leftMargin, topMargin + rowHeight * 3 + 510),
                 Size = new Size(labelWidth, 20),
                 Font = new Font("Arial", 10, FontStyle.Bold),
                 ForeColor = Color.FromArgb(60, 60, 60)
             };
-            txtNotes = new TextBox
+            txtScopeOfWorks = new TextBox
             {
                 Location = new Point(leftMargin + labelWidth, topMargin + rowHeight * 3 + 510),
-                Size = new Size(1350 - labelWidth, NotesHeight),
+                Size = new Size(400, NotesHeight),
                 Multiline = true,
                 ScrollBars = ScrollBars.Vertical,
                 Font = new Font("Arial", 9),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+                Anchor = AnchorStyles.Top | AnchorStyles.Left
             };
-            txtNotes.TextChanged += Control_Changed;
+            txtScopeOfWorks.TextChanged += Control_Changed;
+
+            lblExclusions = new Label
+            {
+                Text = "Exclusions:",
+                Location = new Point(leftMargin + 700, topMargin + rowHeight * 3 + 510),
+                Size = new Size(labelWidth, 20),
+                Font = new Font("Arial", 10, FontStyle.Bold),
+                ForeColor = Color.FromArgb(60, 60, 60)
+            };
+            txtExclusions = new TextBox
+            {
+                Location = new Point(leftMargin + 700 + labelWidth, topMargin + rowHeight * 3 + 510),
+                Size = new Size(400, NotesHeight),
+                Multiline = true,
+                ScrollBars = ScrollBars.Vertical,
+                Font = new Font("Arial", 9),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left
+            };
+            txtExclusions.TextChanged += Control_Changed;
 
             // Add Row Button
             btnAddRow = new Button
@@ -400,8 +435,10 @@ namespace VAR
             this.Controls.Add(lblCreatedBy);
             this.Controls.Add(cboCreatedBy);
             this.Controls.Add(dgvLineItems);
-            this.Controls.Add(lblNotes);
-            this.Controls.Add(txtNotes);
+            this.Controls.Add(lblScopeOfWorks);
+            this.Controls.Add(txtScopeOfWorks);
+            this.Controls.Add(lblExclusions);
+            this.Controls.Add(txtExclusions);
             this.Controls.Add(btnAddRow);
             this.Controls.Add(btnMoveUp);
             this.Controls.Add(btnMoveDown);
@@ -423,9 +460,27 @@ namespace VAR
 
             int gridBottom = dgvLineItems.Top + dgvLineItems.Height;
 
-            lblNotes.Top = gridBottom + GapGridToNotes;
-            txtNotes.Top = gridBottom + GapGridToNotes;
-            int notesBottom = txtNotes.Top + txtNotes.Height;
+            // Scope of Works (left half) and Exclusions (right half), split evenly across
+            // the grid's current width with a gap between them.
+            int rowTop = gridBottom + GapGridToNotes;
+            int gridLeft = dgvLineItems.Left;
+            int labelWidth = lblScopeOfWorks.Width;
+            int halfWidth = (dgvLineItems.Width - NotesColumnGap) / 2;
+
+            lblScopeOfWorks.Top = rowTop;
+            txtScopeOfWorks.Top = rowTop;
+            lblScopeOfWorks.Left = gridLeft;
+            txtScopeOfWorks.Left = gridLeft + labelWidth;
+            txtScopeOfWorks.Width = halfWidth - labelWidth;
+
+            int rightHalfLeft = gridLeft + halfWidth + NotesColumnGap;
+            lblExclusions.Top = rowTop;
+            txtExclusions.Top = rowTop;
+            lblExclusions.Left = rightHalfLeft;
+            txtExclusions.Left = rightHalfLeft + labelWidth;
+            txtExclusions.Width = halfWidth - labelWidth;
+
+            int notesBottom = rowTop + NotesHeight;
 
             btnAddRow.Top = notesBottom + GridBottomOffsetMoveButtons;
             btnMoveUp.Top = notesBottom + GridBottomOffsetMoveButtons;
@@ -469,7 +524,8 @@ namespace VAR
                 cboCreatedBy.Text = _variation.CreatedBy;
             }
 
-            txtNotes.Text = _variation.Notes ?? "";
+            txtScopeOfWorks.Text = _variation.Notes ?? "";
+            txtExclusions.Text = _variation.Exclusions ?? "";
 
             // Setup grid columns
             dgvLineItems.Columns.Clear();
@@ -487,7 +543,8 @@ namespace VAR
                 Name = "ItemDescription",
                 HeaderText = "Description",
                 FillWeight = 350,
-                DefaultCellStyle = new DataGridViewCellStyle { WrapMode = DataGridViewTriState.True }
+                DefaultCellStyle = new DataGridViewCellStyle { WrapMode = DataGridViewTriState.True },
+                CellTemplate = new TextEditCell()
             });
 
             var typeColumn = new DataGridViewComboBoxColumn
@@ -504,14 +561,16 @@ namespace VAR
             {
                 Name = "MaterialQty",
                 HeaderText = "Mat. Qty",
-                FillWeight = 80
+                FillWeight = 80,
+                CellTemplate = new TextEditCell()
             });
 
             dgvLineItems.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "MaterialCost",
                 HeaderText = "Mat. Cost",
-                FillWeight = 100
+                FillWeight = 100,
+                CellTemplate = new TextEditCell()
             });
 
             dgvLineItems.Columns.Add(new DataGridViewTextBoxColumn
@@ -527,7 +586,8 @@ namespace VAR
             {
                 Name = "HourlyQty",
                 HeaderText = "Hours",
-                FillWeight = 80
+                FillWeight = 80,
+                CellTemplate = new TextEditCell()
             });
 
             // Create hourly rate dropdown with rates and custom option
@@ -555,7 +615,8 @@ namespace VAR
             {
                 Name = "CustomRate",
                 HeaderText = "Custom Rate",
-                FillWeight = 110
+                FillWeight = 110,
+                CellTemplate = new TextEditCell()
             });
 
             dgvLineItems.Columns.Add(new DataGridViewTextBoxColumn
@@ -618,7 +679,7 @@ namespace VAR
         private void ComputeDataHash()
         {
             // Create a simple hash of all data to detect real changes
-            var hashData = $"{txtVariationNumber.Text}|{txtVariationName.Text}|{dtpVariationDate.Value}|{cboClientContact.Text}|{cboCreatedBy.Text}|{txtNotes.Text}|";
+            var hashData = $"{txtVariationNumber.Text}|{txtVariationName.Text}|{dtpVariationDate.Value}|{cboClientContact.Text}|{cboCreatedBy.Text}|{txtScopeOfWorks.Text}|{txtExclusions.Text}|";
             foreach (DataGridViewRow row in dgvLineItems.Rows)
             {
                 for (int i = 0; i < row.Cells.Count; i++)
@@ -633,7 +694,7 @@ namespace VAR
 
         private bool HasActualChanges()
         {
-            var currentHash = $"{txtVariationNumber.Text}|{txtVariationName.Text}|{dtpVariationDate.Value}|{cboClientContact.Text}|{cboCreatedBy.Text}|{txtNotes.Text}|";
+            var currentHash = $"{txtVariationNumber.Text}|{txtVariationName.Text}|{dtpVariationDate.Value}|{cboClientContact.Text}|{cboCreatedBy.Text}|{txtScopeOfWorks.Text}|{txtExclusions.Text}|";
             foreach (DataGridViewRow row in dgvLineItems.Rows)
             {
                 for (int i = 0; i < row.Cells.Count; i++)
@@ -1041,7 +1102,8 @@ namespace VAR
             _variation.VariationDate = dtpVariationDate.Value.ToString("dd-MM-yyyy");
             _variation.ClientContact = cboClientContact.Text.Trim();
             _variation.CreatedBy = cboCreatedBy.Text.Trim();
-            _variation.Notes = txtNotes.Text.Trim();
+            _variation.Notes = txtScopeOfWorks.Text.Trim();
+            _variation.Exclusions = txtExclusions.Text.Trim();
 
             // Collect line items from grid
             var lineItems = new List<LineItem>();
@@ -1244,5 +1306,36 @@ namespace VAR
                 }
             }
         }
+    }
+
+    // By default, DataGridView intercepts arrow/navigation keys for cell-to-cell movement
+    // even while a cell is being edited, rather than passing them to the text box for normal
+    // cursor movement/selection. The correct extension point to change that is
+    // EditingControlWantsInputKey (checked by the grid before its own key handling) - a
+    // generic Control.PreviewKeyDown handler runs too late to affect this.
+    internal class TextEditingControl : DataGridViewTextBoxEditingControl
+    {
+        public override bool EditingControlWantsInputKey(Keys keyData, bool dataGridViewWantsInputKey)
+        {
+            switch (keyData & Keys.KeyCode)
+            {
+                case Keys.Left:
+                case Keys.Right:
+                case Keys.Up:
+                case Keys.Down:
+                case Keys.Home:
+                case Keys.End:
+                case Keys.PageUp:
+                case Keys.PageDown:
+                    return true;
+                default:
+                    return base.EditingControlWantsInputKey(keyData, dataGridViewWantsInputKey);
+            }
+        }
+    }
+
+    internal class TextEditCell : DataGridViewTextBoxCell
+    {
+        public override Type EditType => typeof(TextEditingControl);
     }
 }

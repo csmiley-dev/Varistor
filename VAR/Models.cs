@@ -25,7 +25,8 @@ namespace VAR
         public decimal TotalValue { get; set; }
         public int DisplayOrder { get; set; }
         public string? CreatedBy { get; set; }
-        public string? Notes { get; set; }
+        public string? Notes { get; set; } // displayed to users as "Scope of Works"
+        public string? Exclusions { get; set; }
 
         public string VariationType
         {
