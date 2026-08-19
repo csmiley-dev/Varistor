@@ -250,7 +250,7 @@ namespace VAR
                 {
                     col.Item().Text($"Project: {projectInfo.ProjectName} {projectInfo.ProjectNumber}").FontSize(14).Bold();
                     col.Item().PaddingTop(5).Text($"Variation: {variation.VariationNumber} - {variation.VariationName}").FontSize(13).Bold();
-                    col.Item().Text($"Client: {projectInfo.ClientName}").FontSize(12);
+                    col.Item().PaddingTop(4).Text($"Client: {projectInfo.ClientName}").FontSize(12);
                     if (!string.IsNullOrEmpty(variation.ClientContact))
                         col.Item().Text($"Contact: {variation.ClientContact}").FontSize(11);
                     col.Item().Text($"Date: {variation.VariationDate}").FontSize(11);
@@ -258,27 +258,21 @@ namespace VAR
                         col.Item().Text($"Created By: {variation.CreatedBy}").FontSize(11);
                 });
 
-                // Scope of Works and Exclusions, side by side, above the line items
+                // Scope of Works, then Exclusions below it, each full width, above the line items
                 if (!string.IsNullOrWhiteSpace(variation.Notes) || !string.IsNullOrWhiteSpace(variation.Exclusions))
                 {
-                    column.Item().PaddingBottom(10).Row(row =>
+                    column.Item().PaddingBottom(10).Column(col =>
                     {
                         if (!string.IsNullOrWhiteSpace(variation.Notes))
                         {
-                            row.RelativeItem().PaddingRight(10).Column(col =>
-                            {
-                                col.Item().Text("Scope of Works").FontSize(11).Bold();
-                                col.Item().Text(variation.Notes).FontSize(9);
-                            });
+                            col.Item().Text("Scope of Works").FontSize(11).Bold();
+                            col.Item().Text(variation.Notes).FontSize(9);
                         }
 
                         if (!string.IsNullOrWhiteSpace(variation.Exclusions))
                         {
-                            row.RelativeItem().Column(col =>
-                            {
-                                col.Item().Text("Exclusions").FontSize(11).Bold();
-                                col.Item().Text(variation.Exclusions).FontSize(9);
-                            });
+                            col.Item().PaddingTop(!string.IsNullOrWhiteSpace(variation.Notes) ? 8 : 0).Text("Exclusions").FontSize(11).Bold();
+                            col.Item().Text(variation.Exclusions).FontSize(9);
                         }
                     });
                 }
