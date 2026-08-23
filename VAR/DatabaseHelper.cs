@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data.SQLite;
 using System.IO;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace VAR
 {
@@ -443,11 +444,27 @@ namespace VAR
             using var connection = new SQLiteConnection($"Data Source={_dbPath};Version=3;");
             connection.Open();
 
-            string query = "SELECT COUNT(*) FROM Variations";
+            // Based on the highest valid "VAR#X" number seen (X a positive integer), not the
+            // row count - otherwise a variation manually renamed to something like "VAR#5A"
+            // (e.g. a duplicate of VAR#5) throws off the count and produces a number that
+            // collides with or falls behind existing ones.
+            string query = "SELECT VariationNumber FROM Variations";
             using var command = new SQLiteCommand(query, connection);
-            int count = Convert.ToInt32(command.ExecuteScalar());
+            using var reader = command.ExecuteReader();
 
-            return $"VAR#{count + 1}";
+            var pattern = new Regex(@"^VAR#(\d+)$", RegexOptions.IgnoreCase);
+            int maxNumber = 0;
+
+            while (reader.Read())
+            {
+                var match = pattern.Match(reader.GetString(0));
+                if (match.Success && int.TryParse(match.Groups[1].Value, out int number))
+                {
+                    maxNumber = Math.Max(maxNumber, number);
+                }
+            }
+
+            return $"VAR#{maxNumber + 1}";
         }
 
         public List<string> GetClientContacts()

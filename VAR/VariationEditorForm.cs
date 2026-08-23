@@ -33,6 +33,7 @@ namespace VAR
         private Button btnClose;
         private Button btnPrint;
         private Button btnAddRow;
+        private Button btnDeleteRow;
         private Button btnMoveUp;
         private Button btnMoveDown;
         private Label lblSaveStatus;
@@ -314,6 +315,20 @@ namespace VAR
             btnAddRow.FlatAppearance.BorderSize = 0;
             btnAddRow.Click += BtnAddRow_Click;
 
+            // Delete Row Button
+            btnDeleteRow = new Button
+            {
+                Text = "Delete Row",
+                Location = new Point(leftMargin + 360, topMargin + rowHeight * 3 + 510),
+                Size = new Size(100, 30),
+                BackColor = Color.FromArgb(178, 34, 34),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Arial", 9, FontStyle.Bold)
+            };
+            btnDeleteRow.FlatAppearance.BorderSize = 0;
+            btnDeleteRow.Click += BtnDeleteRow_Click;
+
             // Move Up Button
             btnMoveUp = new Button
             {
@@ -440,6 +455,7 @@ namespace VAR
             this.Controls.Add(lblExclusions);
             this.Controls.Add(txtExclusions);
             this.Controls.Add(btnAddRow);
+            this.Controls.Add(btnDeleteRow);
             this.Controls.Add(btnMoveUp);
             this.Controls.Add(btnMoveDown);
             this.Controls.Add(lblMaterialSubtotal);
@@ -483,6 +499,7 @@ namespace VAR
             int notesBottom = rowTop + NotesHeight;
 
             btnAddRow.Top = notesBottom + GridBottomOffsetMoveButtons;
+            btnDeleteRow.Top = notesBottom + GridBottomOffsetMoveButtons;
             btnMoveUp.Top = notesBottom + GridBottomOffsetMoveButtons;
             btnMoveDown.Top = notesBottom + GridBottomOffsetMoveButtons;
 
@@ -1039,6 +1056,31 @@ namespace VAR
             row.Cells["LabourTotal"].Value = 0;
             row.Cells["LineTotal"].Value = 0;
 
+            _hasUnsavedChanges = true;
+        }
+
+        private void BtnDeleteRow_Click(object? sender, EventArgs e)
+        {
+            if (dgvLineItems.CurrentRow == null)
+            {
+                MessageBox.Show("Please select a line item to delete.", "No Selection",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var result = MessageBox.Show(
+                "Are you sure you want to delete this line item?",
+                "Delete Line Item",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning);
+
+            if (result != DialogResult.Yes)
+                return;
+
+            dgvLineItems.Rows.RemoveAt(dgvLineItems.CurrentRow.Index);
+
+            RenumberItems();
+            UpdateTotals();
             _hasUnsavedChanges = true;
         }
 
