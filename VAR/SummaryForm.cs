@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Reflection;
@@ -34,7 +35,6 @@ namespace VAR
         private Button btnDuplicateVariation;
         private Button btnMoveUp;
         private Button btnMoveDown;
-        private Button btnRefresh;
         private Button btnPrintSummary;
         private int _selectedRowIndex = -1;
 
@@ -119,6 +119,7 @@ namespace VAR
                 ReadOnly = false,
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
                 MultiSelect = false,
+                ClipboardCopyMode = DataGridViewClipboardCopyMode.Disable,
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
                 EditMode = DataGridViewEditMode.EditOnEnter,
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
@@ -154,8 +155,13 @@ namespace VAR
                 Location = new Point(20, 420),
                 Size = new Size(150, 35),
                 Text = "New Variation",
+                BackColor = Color.FromArgb(60, 179, 113),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Arial", 10, FontStyle.Bold),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left
             };
+            btnNewVariation.FlatAppearance.BorderSize = 0;
             btnNewVariation.Click += BtnNewVariation_Click;
 
             btnEditVariation = new Button
@@ -163,8 +169,13 @@ namespace VAR
                 Location = new Point(180, 420),
                 Size = new Size(150, 35),
                 Text = "Edit Variation",
+                BackColor = Color.FromArgb(255, 193, 7),
+                ForeColor = Color.Black,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Arial", 10, FontStyle.Bold),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left
             };
+            btnEditVariation.FlatAppearance.BorderSize = 0;
             btnEditVariation.Click += BtnEditVariation_Click;
 
             btnDeleteVariation = new Button
@@ -172,8 +183,13 @@ namespace VAR
                 Location = new Point(340, 420),
                 Size = new Size(150, 35),
                 Text = "Delete Variation",
+                BackColor = Color.FromArgb(178, 34, 34),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Arial", 10, FontStyle.Bold),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left
             };
+            btnDeleteVariation.FlatAppearance.BorderSize = 0;
             btnDeleteVariation.Click += BtnDeleteVariation_Click;
 
             btnDuplicateVariation = new Button
@@ -181,8 +197,13 @@ namespace VAR
                 Location = new Point(500, 420),
                 Size = new Size(150, 35),
                 Text = "Duplicate Variation",
+                BackColor = Color.FromArgb(100, 149, 237),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Arial", 10, FontStyle.Bold),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left
             };
+            btnDuplicateVariation.FlatAppearance.BorderSize = 0;
             btnDuplicateVariation.Click += BtnDuplicateVariation_Click;
 
             btnMoveUp = new Button
@@ -190,8 +211,13 @@ namespace VAR
                 Location = new Point(660, 420),
                 Size = new Size(100, 35),
                 Text = "Move Up",
+                BackColor = Color.FromArgb(100, 149, 237),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Arial", 10, FontStyle.Bold),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left
             };
+            btnMoveUp.FlatAppearance.BorderSize = 0;
             btnMoveUp.Click += BtnMoveUp_Click;
 
             btnMoveDown = new Button
@@ -199,22 +225,18 @@ namespace VAR
                 Location = new Point(770, 420),
                 Size = new Size(100, 35),
                 Text = "Move Down",
+                BackColor = Color.FromArgb(100, 149, 237),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Arial", 10, FontStyle.Bold),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left
             };
+            btnMoveDown.FlatAppearance.BorderSize = 0;
             btnMoveDown.Click += BtnMoveDown_Click;
-
-            btnRefresh = new Button
-            {
-                Location = new Point(880, 420),
-                Size = new Size(100, 35),
-                Text = "Refresh",
-                Anchor = AnchorStyles.Top | AnchorStyles.Left
-            };
-            btnRefresh.Click += (s, e) => LoadData();
 
             btnPrintSummary = new Button
             {
-                Location = new Point(990, 420),
+                Location = new Point(880, 420),
                 Size = new Size(150, 35),
                 Text = "📄 Print Summary",
                 BackColor = Color.FromArgb(70, 130, 180),
@@ -339,7 +361,6 @@ namespace VAR
             this.Controls.Add(btnDuplicateVariation);
             this.Controls.Add(btnMoveUp);
             this.Controls.Add(btnMoveDown);
-            this.Controls.Add(btnRefresh);
             this.Controls.Add(btnPrintSummary);
             this.Controls.Add(grpAllVariations);
             this.Controls.Add(grpApprovedVariations);
@@ -414,7 +435,6 @@ namespace VAR
             btnDuplicateVariation.Top = buttonsTop;
             btnMoveUp.Top = buttonsTop;
             btnMoveDown.Top = buttonsTop;
-            btnRefresh.Top = buttonsTop;
             btnPrintSummary.Top = buttonsTop;
 
             int allVariationsTop = buttonsTop + ButtonRowHeight + GapButtonsToSummary;
@@ -766,7 +786,7 @@ namespace VAR
 
             if (selectedValue == "Approved")
             {
-                var approvalForm = new ApprovalForm();
+                var approvalForm = new ApprovalForm(_dbHelper.GetClientContacts());
                 if (approvalForm.ShowDialog() == DialogResult.OK)
                 {
                     _dbHelper.ApproveVariation(variation.Id, approvalForm.ApprovedBy);
@@ -1048,18 +1068,18 @@ namespace VAR
 
     public class ApprovalForm : Form
     {
-        private TextBox txtApprovedBy;
+        private ComboBox cboApprovedBy;
         private Button btnOK;
         private Button btnCancel;
 
         public string ApprovedBy { get; private set; } = "";
 
-        public ApprovalForm()
+        public ApprovalForm(List<string> clientContacts)
         {
-            InitializeComponent();
+            InitializeComponent(clientContacts);
         }
 
-        private void InitializeComponent()
+        private void InitializeComponent(List<string> clientContacts)
         {
             this.Text = "Approve Variation";
             this.Size = new Size(400, 150);
@@ -1075,11 +1095,18 @@ namespace VAR
                 Size = new Size(100, 20)
             };
 
-            txtApprovedBy = new TextBox
+            // DropDown (not DropDownList) so a name can be typed in manually as well as
+            // picked from the list of client contacts seeded for this project.
+            cboApprovedBy = new ComboBox
             {
                 Location = new Point(130, 20),
-                Size = new Size(230, 20)
+                Size = new Size(230, 20),
+                DropDownStyle = ComboBoxStyle.DropDown
             };
+            foreach (var contact in clientContacts)
+            {
+                cboApprovedBy.Items.Add(contact);
+            }
 
             btnOK = new Button
             {
@@ -1099,7 +1126,7 @@ namespace VAR
             };
 
             this.Controls.Add(lblApprovedBy);
-            this.Controls.Add(txtApprovedBy);
+            this.Controls.Add(cboApprovedBy);
             this.Controls.Add(btnOK);
             this.Controls.Add(btnCancel);
 
@@ -1109,7 +1136,7 @@ namespace VAR
 
         private void BtnOK_Click(object? sender, EventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(txtApprovedBy.Text))
+            if (string.IsNullOrWhiteSpace(cboApprovedBy.Text))
             {
                 MessageBox.Show("Please enter your name.", "Validation Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -1117,7 +1144,7 @@ namespace VAR
                 return;
             }
 
-            ApprovedBy = txtApprovedBy.Text.Trim();
+            ApprovedBy = cboApprovedBy.Text.Trim();
         }
     }
 
